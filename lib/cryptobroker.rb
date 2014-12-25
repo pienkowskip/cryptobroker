@@ -1,7 +1,8 @@
-require "cryptobroker/version"
+require 'cryptobroker/version'
+require 'cryptobroker/config'
 
 module Cryptobroker
   def self.hi
-    puts "Hello world!"
+    config = Cryptobroker::Config.new('../config.yml')
   end
 end
