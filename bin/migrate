@@ -2,8 +2,7 @@
 
 require 'cryptobroker'
 
-class Migrate
-  include Cryptobroker
+class Migrate < Cryptobroker
 
   attr_reader :migrations
 
@@ -24,6 +23,37 @@ class Migrate
   def down
     @migrations.reverse_each { |m| m.migrate(:down) }
   end
+
+  def init_data
+    currencies_array = Currency.create([
+                        {code: 'BTC', name: 'Bitcoin', crypto: true},
+                        {code: 'GHS', name: 'Gigahash', crypto: true},
+                        {code: 'LTC', name: 'Litecoin', crypto: true},
+                        {code: 'NMC', name: 'Namecoin', crypto: true},
+                        {code: 'USD', name: 'United States dollar', crypto: false},
+                        {code: 'EUR', name: 'Euro', crypto: false},
+                        {code: 'PLN', name: 'Polish zloty', crypto: false}
+                    ])
+    currencies = {}
+    currencies_array.each { |currency| currencies[currency.code] = currency }
+    cex = Exchange.create({name: 'cex.io', api: 'cexio'})
+    market = ->(curr1, curr2) { {exchange: cex, base: currencies[curr1], quote: currencies[curr2], traced: true} }
+    Market.create([
+                      market['BTC', 'USD'],
+                      market['GHS', 'USD'],
+                      market['LTC', 'USD'],
+                      market['BTC', 'EUR'],
+                      market['LTC', 'EUR'],
+                      market['GHS', 'BTC'],
+                      market['LTC', 'BTC'],
+                      market['NMC', 'BTC'],
+                      market['GHS', 'LTC'],
+                      market['GHS', 'BTC'],
+                  ])
+  end
 end
 
-Migrate.new
+migrate = Migrate.new
+migrate.down
+migrate.up
+migrate.init_data

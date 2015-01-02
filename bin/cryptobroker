@@ -10,4 +10,4 @@ class Application
   end
 end
 
-puts Application.new
+puts Cryptobroker.new
