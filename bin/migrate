@@ -1,0 +1,29 @@
+#!/usr/bin/env ruby
+
+require 'cryptobroker'
+
+class Migrate
+  include Cryptobroker
+
+  attr_reader :migrations
+
+  def initialize(config = '../config.yml')
+    super config
+    @migrations = Dir.glob('../db/migrate/*.rb').sort
+    @migrations.each { |m| require m }
+    @migrations = @migrations
+                      .map { |m| File.basename m, '.rb' }
+                      .select { |m| m =~ /\A[0-9]{14}_.+\z/ }
+                      .map { |m| m.sub(/\A[0-9]{14}_/, '').camelize.constantize }
+  end
+
+  def up
+    @migrations.each { |m| m.migrate(:up) }
+  end
+
+  def down
+    @migrations.reverse_each { |m| m.migrate(:down) }
+  end
+end
+
+Migrate.new
