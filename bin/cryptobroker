@@ -2,12 +2,4 @@
 
 require 'cryptobroker'
 
-class Application
-  include Cryptobroker
-
-  def initialize(config = '../config.yml')
-    super config
-  end
-end
-
-puts Cryptobroker.new
+puts Cryptobroker.new('../config.yml').trace

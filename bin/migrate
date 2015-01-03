@@ -9,7 +9,7 @@ class Migrate < Cryptobroker
   def initialize(config = '../config.yml')
     super config
     @migrations = Dir.glob('../db/migrate/*.rb').sort
-    @migrations.each { |m| require m }
+    @migrations.each { |m| require_relative m }
     @migrations = @migrations
                       .map { |m| File.basename m, '.rb' }
                       .select { |m| m =~ /\A[0-9]{14}_.+\z/ }
@@ -47,8 +47,7 @@ class Migrate < Cryptobroker
                       market['GHS', 'BTC'],
                       market['LTC', 'BTC'],
                       market['NMC', 'BTC'],
-                      market['GHS', 'LTC'],
-                      market['GHS', 'BTC'],
+                      market['GHS', 'LTC']
                   ])
   end
 end

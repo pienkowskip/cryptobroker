@@ -6,4 +6,8 @@ class Market < ActiveRecord::Base
 
   validates_belongs :exchange, :base, :quote
   validates :traced, inclusion: [true, false]
+
+  def couple
+    base.code + '/' + quote.code
+  end
 end

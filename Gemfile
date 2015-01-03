@@ -6,3 +6,5 @@ gemspec
 gem 'activerecord'
 
 gem 'pg'
+
+gem 'addressable'
