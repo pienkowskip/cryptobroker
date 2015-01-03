@@ -12,7 +12,6 @@ class Cryptobroker
   end
 
   def trace
-    # Exchange.includes(:markets).where(markets: {traced: true})
     markets = Market.preload(:exchange, :base, :quote).where(traced: true)
     apis = {}
     markets.each { |market| apis[market.exchange.api] = nil }
@@ -22,6 +21,7 @@ class Cryptobroker
     end
     loop do
       rq = 0
+      start = Time.now
       markets.each do |market|
         api = apis[market.exchange.api]
         last = market.trades.select(:tid).last
@@ -40,7 +40,8 @@ class Cryptobroker
           Trade.create(trades.map { |t| t[:market] = market ; t })
         end unless trades.empty?
       end
-      sleep rq * DELAY_PER_RQ
+      delay = rq * DELAY_PER_RQ - (Time.now - start)
+      sleep delay if delay > 0
     end
   end
 end
