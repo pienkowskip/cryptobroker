@@ -1,6 +1,7 @@
 require_relative './cryptobroker/version'
 require_relative './cryptobroker/config'
 require_relative './cryptobroker/database'
+require_relative './cryptobroker/ohlcv'
 
 class Cryptobroker
   DELAY_PER_RQ = 3
@@ -43,5 +44,13 @@ class Cryptobroker
       delay = rq * DELAY_PER_RQ - (Time.now - start)
       sleep delay if delay > 0
     end
+  end
+
+  def ohlcv(period, starts = nil, ends = nil)
+    markets = {}
+    Market.preload(:base, :quote).where(traced: true).each do |market|
+      markets[market.couple] = OHLCV.create Trade.unscoped.where(market: market).order(:timestamp).load, period, starts, ends, false
+    end
+    markets
   end
 end

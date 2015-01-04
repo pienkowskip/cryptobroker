@@ -1,0 +1,13 @@
+#!/usr/bin/env ruby
+
+# require 'indicator'
+#
+# include Indicator
+# include Indicator::AutoGen
+
+require 'cryptobroker'
+
+charts = Cryptobroker.new('../config.yml').ohlcv 15 * 60, Time.parse('2015-01-04 11:00:00 UTC')
+charts['BTC/USD'].each do |o|
+  puts "#{o.start} - #{o.end}\tO: #{o.open}\tH: #{o.high}\tL: #{o.low}\tC: #{o.close}\tV: #{o.volume}"
+end
