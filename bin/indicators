@@ -1,13 +1,21 @@
 #!/usr/bin/env ruby
 
-# require 'indicator'
-#
-# include Indicator
-# include Indicator::AutoGen
-
 require 'cryptobroker'
 
-charts = Cryptobroker.new('../config.yml').ohlcv 15 * 60, Time.parse('2015-01-04 11:00:00 UTC')
-charts['BTC/USD'].each do |o|
-  puts "#{o.start} - #{o.end}\tO: #{o.open}\tH: #{o.high}\tL: #{o.low}\tC: #{o.close}\tV: #{o.volume}"
+charts = Cryptobroker.new('../config.yml').ohlcv 10 * 60#, Time.parse('2015-01-04 00:00:00 UTC')
+price = :weighted
+broker = Cryptobroker::Broker::Basic.new
+b=[]
+macd = Cryptobroker::Indicator::MACD.new [broker], price
+charts.each do |market, chart|
+  broker.reset 100, chart, price
+  macd.run chart
+  # macd.plot chart
+  po = broker.pay_out
+  b << po[:amount]
+  puts "#{market} amount: #{'% 10.2f' % po[:amount]} transactions: #{po[:transactions]}/#{chart.size}"
 end
+b.sort!
+median = b.size % 2 == 1 ? b[b.size/2] : (b[b.size/2 - 1] + b[b.size/2]) / 2.0
+puts '%.6f' % median
+
