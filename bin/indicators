@@ -20,34 +20,42 @@ end
 
 results = {}
 
+indicators = [
+    Cryptobroker::Indicator::MACD,
+    Cryptobroker::Indicator::FilteredMACD,
+    Cryptobroker::Indicator::DEMA
+]
+
+max_name = indicators.map { |i| i.name.length }.max
+
 periods.each do |period|
   charts = {}
   trades.each do |market, tr|
     charts[market] = Cryptobroker::OHLCV.create tr, period, nil, nil, false
   end
   [:median, :weighted].each do |price|
-    macd = Cryptobroker::Indicator::MACD.new brokers, price
-    score = []
-    charts.each do |market, chart|
-      brokers.each { |broker| broker.reset start_amount, chart }
-      macd.run chart
-      result = {}
-      scores = []
-      brokers.each do |broker|
-        amount = broker.pay_out[:amount]
-        result[broker] = broker.pay_out
-        scores << amount
-        2.times { scores << amount } if broker.price == price
+    indicators.each do |indicator|
+      indicator = indicator.new brokers, price
+      score = []
+      charts.each do |market, chart|
+        brokers.each { |broker| broker.reset start_amount, chart }
+        indicator.run chart
+        result = {}
+        scores = []
+        brokers.each do |broker|
+          amount = broker.pay_out[:amount]
+          result[broker] = broker.pay_out
+          scores << amount
+          2.times { scores << amount } if broker.price == price
+        end
+        result[:median] = median[scores]
+        results[[indicator.class.name, period / 60.0, price, market]] = result
+        score << result[:median]
       end
-      result[:median] = median[scores]
-      results[['MACD', period / 60.0, price, market]] = result
-      score << result[:median]
+      s = score.reduce(:+) / score.size
+      m = median[score]
+      puts "%-#{max_name}s (period: %4.1fm, price: %8s) = %9.4f (median: %9.4f)" % [indicator.class.name, period / 60.0, price, s, m]
     end
-    s = score.reduce(:+) / score.size
-    m = median[score]
-    puts 'MACD (period: %4.1fm, price: %8s) = %9.4f (median: %9.4f)' % [period / 60.0, price, s, m]
+    puts "\n"
   end
-  puts "\n"
 end
-
-
