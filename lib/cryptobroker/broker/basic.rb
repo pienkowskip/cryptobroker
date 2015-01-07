@@ -17,14 +17,16 @@ module Cryptobroker::Broker
       end
     end
 
-    def initialize(type = :base)
+    attr_reader :type, :price
+
+    def initialize(type = :base, pr = :median)
       @type = type
+      @price = pr
     end
 
-    def reset(amount, market, price = :median)
+    def reset(amount, market)
       @balance = @type == :base ? Balance.new(amount, 0) : Balance.new(0, amount)
       @market = market
-      @price = price
       @tr = 0
       update_last
     end
@@ -34,29 +36,32 @@ module Cryptobroker::Broker
     end
 
     def sell(timestamp, params = {})
-      price = find_price(timestamp)
-      return if price.nil?
+      pr = find_price timestamp, params
+      return if pr.nil?
       @tr += 1
       update_last if @type == :base
-      @balance.quote += @balance.base * price
+      @balance.quote += @balance.base * pr
       @balance.empty_base
     end
 
     def buy(timestamp, params = {})
-      price = find_price(timestamp)
-      return if price.nil?
+      pr = find_price timestamp, params
+      return if pr.nil?
       @tr += 1
       update_last if @type == :quote
-      @balance.base += @balance.quote / price
+      @balance.base += @balance.quote / pr
       @balance.empty_quote
     end
 
-    private
+    protected
 
-    def find_price(timestamp)
-      idx = @market.index { |i| timestamp < i.end }
-      return nil if idx.nil?
-      @market[idx].send @price
+    def find_price(timestamp, params)
+      # idx = @market.index { |i| timestamp < i.end }
+      # return nil if idx.nil?
+      # @market[idx].send @price
+      chunk = @market[params[:idx]+1]
+      return nil if chunk.nil?
+      chunk.send @price
     end
 
     def update_last

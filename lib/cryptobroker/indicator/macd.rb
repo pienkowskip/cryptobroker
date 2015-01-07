@@ -18,9 +18,9 @@ module Cryptobroker::Indicator
       hist.each_with_index do |v,i|
         unless last.nil? || v.nil?
           if last < 0 && v >= 0
-            signal :buy, chart[i].end
+            signal :buy, chart[i].end, i
           elsif last > 0 && v <= 0
-            signal :sell, chart[i].end
+            signal :sell, chart[i].end, i
           end
         end
         last = v
@@ -73,8 +73,8 @@ unset xtics
       array.rotate! ri + 1
     end
 
-    def signal(type, timestamp)
-      @brokers.each { |broker| broker.send type, timestamp }
+    def signal(type, timestamp, idx)
+      @brokers.each { |broker| broker.send type, timestamp, {idx: idx} }
     end
   end
 end

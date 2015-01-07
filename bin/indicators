@@ -2,20 +2,52 @@
 
 require 'cryptobroker'
 
-charts = Cryptobroker.new('../config.yml').ohlcv 10 * 60#, Time.parse('2015-01-04 00:00:00 UTC')
-price = :weighted
-broker = Cryptobroker::Broker::Basic.new
-b=[]
-macd = Cryptobroker::Indicator::MACD.new [broker], price
-charts.each do |market, chart|
-  broker.reset 100, chart, price
-  macd.run chart
-  # macd.plot chart
-  po = broker.pay_out
-  b << po[:amount]
-  puts "#{market} amount: #{'% 10.2f' % po[:amount]} transactions: #{po[:transactions]}/#{chart.size}"
+app = Cryptobroker.new('../config.yml')
+trades = app.trades
+periods = [1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 7.5, 10, 15, 20, 30, 40, 60, 90].map { |p| p * 60 }
+prices = [:open, :close, :median, :weighted]
+
+start_amount = 100
+brokers = []
+prices.each do |p|
+  brokers << Cryptobroker::Broker::Basic.new(:base, p)
+  brokers << Cryptobroker::Broker::Basic.new(:quote, p)
 end
-b.sort!
-median = b.size % 2 == 1 ? b[b.size/2] : (b[b.size/2 - 1] + b[b.size/2]) / 2.0
-puts '%.6f' % median
+median = ->(ar) do
+  ar.sort!
+  ar.size % 2 == 1 ? ar[ar.size/2] : (ar[ar.size/2 - 1] + ar[ar.size/2]) / 2.0
+end
+
+results = {}
+
+periods.each do |period|
+  charts = {}
+  trades.each do |market, tr|
+    charts[market] = Cryptobroker::OHLCV.create tr, period, nil, nil, false
+  end
+  [:median, :weighted].each do |price|
+    macd = Cryptobroker::Indicator::MACD.new brokers, price
+    score = []
+    charts.each do |market, chart|
+      brokers.each { |broker| broker.reset start_amount, chart }
+      macd.run chart
+      result = {}
+      scores = []
+      brokers.each do |broker|
+        amount = broker.pay_out[:amount]
+        result[broker] = broker.pay_out
+        scores << amount
+        2.times { scores << amount } if broker.price == price
+      end
+      result[:median] = median[scores]
+      results[['MACD', period / 60.0, price, market]] = result
+      score << result[:median]
+    end
+    s = score.reduce(:+) / score.size
+    m = median[score]
+    puts 'MACD (period: %4.1fm, price: %8s) = %9.4f (median: %9.4f)' % [period / 60.0, price, s, m]
+  end
+  puts "\n"
+end
+
 

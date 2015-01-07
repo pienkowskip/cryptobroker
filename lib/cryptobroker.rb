@@ -48,6 +48,14 @@ class Cryptobroker
     end
   end
 
+  def trades
+    markets = {}
+    Market.preload(:base, :quote).where(traced: true).each do |market|
+      markets[market.couple] = Trade.unscoped.where(market: market).order(:timestamp).load
+    end
+    markets
+  end
+
   def ohlcv(period, starts = nil, ends = nil)
     markets = {}
     Market.preload(:base, :quote).where(traced: true).each do |market|
