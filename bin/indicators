@@ -23,7 +23,8 @@ results = {}
 indicators = [
     Cryptobroker::Indicator::MACD,
     Cryptobroker::Indicator::FilteredMACD,
-    Cryptobroker::Indicator::DEMA
+    Cryptobroker::Indicator::DEMA,
+    Cryptobroker::Indicator::FilteredDEMA
 ]
 
 max_name = indicators.map { |i| i.name.length }.max

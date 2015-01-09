@@ -1,0 +1,8 @@
+#!/usr/bin/env ruby
+
+require 'cryptobroker'
+
+app = Cryptobroker.new('../config.yml')
+dema = Cryptobroker::Indicator::DEMA.new []
+dema.plot app.ohlcv 1, 10*60
+# puts app.ohlcv(1, 1*60).count

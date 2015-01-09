@@ -5,6 +5,7 @@ require_relative './cryptobroker/ohlcv'
 require_relative './cryptobroker/indicator/macd'
 require_relative './cryptobroker/indicator/filtered_macd'
 require_relative './cryptobroker/indicator/dema'
+require_relative './cryptobroker/indicator/filtered_dema'
 require_relative './cryptobroker/broker/basic'
 
 class Cryptobroker
@@ -58,11 +59,7 @@ class Cryptobroker
     markets
   end
 
-  def ohlcv(period, starts = nil, ends = nil)
-    markets = {}
-    Market.preload(:base, :quote).where(traced: true).each do |market|
-      markets[market.couple] = OHLCV.create Trade.unscoped.where(market: market).order(:timestamp).load, period, starts, ends, false
-    end
-    markets
+  def ohlcv(market_id, period, starts = nil, ends = nil)
+    OHLCV.create Trade.unscoped.where(market: market_id).order(:timestamp).load, period, starts, ends, false
   end
 end

@@ -1,7 +1,7 @@
 require 'indicator'
 
 module Cryptobroker::Indicator
-  class Base
+  module Base
     include ::Indicator
     include ::Indicator::AutoGen
 
