@@ -2,11 +2,6 @@ require_relative './cryptobroker/version'
 require_relative './cryptobroker/config'
 require_relative './cryptobroker/database'
 require_relative './cryptobroker/ohlcv'
-require_relative './cryptobroker/indicator/macd'
-require_relative './cryptobroker/indicator/filtered_macd'
-require_relative './cryptobroker/indicator/dema'
-require_relative './cryptobroker/indicator/filtered_dema'
-require_relative './cryptobroker/broker/basic'
 
 class Cryptobroker
   DELAY_PER_RQ = 3

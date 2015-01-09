@@ -1,8 +1,5 @@
-require_relative './histogram_based'
 module Cryptobroker::Indicator
   module HistogramBasedFiltered
-    include HistogramBased
-
     def run(chart)
       @last_sig = nil
       hist = histogram(chart)

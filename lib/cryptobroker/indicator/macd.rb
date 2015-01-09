@@ -5,9 +5,9 @@ module Cryptobroker::Indicator
   class MACD
     include HistogramBased
 
-    def initialize(brokers, price = :median)
+    def initialize(brokers, price = :median, fast = 12, slow = 26, signal = 9)
       super brokers, price
-      @macd = Macd.new 12, 26, 9
+      @macd = Macd.new fast, slow, signal
     end
 
     def histogram(chart)

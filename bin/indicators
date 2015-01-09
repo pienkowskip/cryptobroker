@@ -1,62 +1,11 @@
 #!/usr/bin/env ruby
 
 require 'cryptobroker'
+require 'cryptobroker/indicator/judging_tool'
 
 app = Cryptobroker.new('../config.yml')
 trades = app.trades
 periods = [1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 7.5, 10, 15, 20, 30, 40, 60, 90].map { |p| p * 60 }
-prices = [:open, :close, :median, :weighted]
 
-start_amount = 100
-brokers = []
-prices.each do |p|
-  brokers << Cryptobroker::Broker::Basic.new(:base, p)
-  brokers << Cryptobroker::Broker::Basic.new(:quote, p)
-end
-median = ->(ar) do
-  ar.sort!
-  ar.size % 2 == 1 ? ar[ar.size/2] : (ar[ar.size/2 - 1] + ar[ar.size/2]) / 2.0
-end
-
-results = {}
-
-indicators = [
-    Cryptobroker::Indicator::MACD,
-    Cryptobroker::Indicator::FilteredMACD,
-    Cryptobroker::Indicator::DEMA,
-    Cryptobroker::Indicator::FilteredDEMA
-]
-
-max_name = indicators.map { |i| i.name.length }.max
-
-periods.each do |period|
-  charts = {}
-  trades.each do |market, tr|
-    charts[market] = Cryptobroker::OHLCV.create tr, period, nil, nil, false
-  end
-  [:median, :weighted].each do |price|
-    indicators.each do |indicator|
-      indicator = indicator.new brokers, price
-      score = []
-      charts.each do |market, chart|
-        brokers.each { |broker| broker.reset start_amount, chart }
-        indicator.run chart
-        result = {}
-        scores = []
-        brokers.each do |broker|
-          amount = broker.pay_out[:amount]
-          result[broker] = broker.pay_out
-          scores << amount
-          2.times { scores << amount } if broker.price == price
-        end
-        result[:median] = median[scores]
-        results[[indicator.class.name, period / 60.0, price, market]] = result
-        score << result[:median]
-      end
-      s = score.reduce(:+) / score.size
-      m = median[score]
-      puts "%-#{max_name}s (period: %4.1fm, price: %8s) = %9.4f (median: %9.4f)" % [indicator.class.name, period / 60.0, price, s, m]
-    end
-    puts "\n"
-  end
-end
+judging_tool = Cryptobroker::Indicator::JudgingTool.new(100, periods.reverse, 1000)
+judging_tool.judge trades.values
