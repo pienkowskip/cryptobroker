@@ -36,24 +36,32 @@ module Cryptobroker::Broker
     end
 
     def sell(timestamp, params = {})
-      pr = find_price timestamp, params
-      return if pr.nil?
+      price = find_price timestamp, params
+      return if price.nil?
       @tr += 1
       update_last if @type == :base
-      @balance.quote += @balance.base * pr
-      @balance.empty_base
+      sell_all price
     end
 
     def buy(timestamp, params = {})
-      pr = find_price timestamp, params
-      return if pr.nil?
+      price = find_price timestamp, params
+      return if price.nil?
       @tr += 1
       update_last if @type == :quote
-      @balance.base += @balance.quote / pr
-      @balance.empty_quote
+      buy_all price
     end
 
     protected
+
+    def buy_all(price)
+      @balance.base += @balance.quote / price
+      @balance.empty_quote
+    end
+
+    def sell_all(price)
+      @balance.quote += @balance.base * price
+      @balance.empty_base
+    end
 
     def find_price(timestamp, params)
       # idx = @market.index { |i| timestamp < i.end }

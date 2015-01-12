@@ -7,5 +7,5 @@ app = Cryptobroker.new('../config.yml')
 trades = app.trades
 periods = [1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 7.5, 10, 15, 20, 30, 40, 60, 90].map { |p| p * 60 }
 
-judging_tool = Cryptobroker::Indicator::JudgingTool.new(100, periods.reverse, 1000)
+judging_tool = Cryptobroker::Indicator::JudgingTool.new(100, periods.reverse, 1000, 0.002)
 judging_tool.judge trades.values

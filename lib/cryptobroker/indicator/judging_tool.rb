@@ -6,7 +6,7 @@ require_relative './filtered_macd_with_dema'
 require_relative './dema'
 require_relative './filtered_dema'
 require_relative './random'
-require_relative '../broker/basic'
+require_relative '../broker/transaction_fee'
 
 module Cryptobroker::Indicator
   class JudgingTool
@@ -26,7 +26,7 @@ module Cryptobroker::Indicator
       end
     end
 
-    def initialize(start_amount, periods, min_periods)
+    def initialize(start_amount, periods, min_periods, transaction_fee)
       @start_amount = start_amount
       @periods = periods
       # @prices = [:open, :close, :median, :weighted]
@@ -34,8 +34,8 @@ module Cryptobroker::Indicator
       @min_periods = min_periods
       @brokers = []
       @prices.each do |p|
-        @brokers << Cryptobroker::Broker::Basic.new(:base, p)
-        @brokers << Cryptobroker::Broker::Basic.new(:quote, p)
+        @brokers << Cryptobroker::Broker::TransactionFee.new(:base, p, transaction_fee)
+        @brokers << Cryptobroker::Broker::TransactionFee.new(:quote, p, transaction_fee)
       end
       @indicators = {
           'MACD(12,26,9)' => ->(b, p) { MACD.new b, p, 12, 26, 9 },
