@@ -2,4 +2,4 @@
 
 require 'cryptobroker'
 
-puts Cryptobroker.new('../config.yml').trace
+Cryptobroker.new('../config.yml').trace

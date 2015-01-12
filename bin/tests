@@ -1,8 +1,9 @@
 #!/usr/bin/env ruby
 
 require 'cryptobroker'
+require 'cryptobroker/indicator/macd_on_dema'
 
 app = Cryptobroker.new('../config.yml')
-dema = Cryptobroker::Indicator::DEMA.new []
-dema.plot app.ohlcv 1, 10*60
+dema = Cryptobroker::Indicator::MACDOnDEMA.new []
+dema.run app.ohlcv 1, 15*60
 # puts app.ohlcv(1, 1*60).count

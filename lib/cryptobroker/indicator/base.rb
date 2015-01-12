@@ -12,6 +12,10 @@ module Cryptobroker::Indicator
 
     protected
 
+    def price(chart)
+      chart.map { |i| i.send @price }
+    end
+
     def shift_nils(array)
       ri = array.rindex { |i| !i.nil? }
       return array if ri.nil?

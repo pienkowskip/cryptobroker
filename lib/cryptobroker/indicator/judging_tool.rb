@@ -1,7 +1,11 @@
 require_relative './macd'
+require_relative './macd_with_dema'
+require_relative './macd_on_dema'
 require_relative './filtered_macd'
+require_relative './filtered_macd_with_dema'
 require_relative './dema'
 require_relative './filtered_dema'
+require_relative './random'
 require_relative '../broker/basic'
 
 module Cryptobroker::Indicator
@@ -36,7 +40,6 @@ module Cryptobroker::Indicator
       @indicators = {
           'MACD(12,26,9)' => ->(b, p) { MACD.new b, p, 12, 26, 9 },
           'MACD(5,35,5)' => ->(b, p) { MACD.new b, p, 5, 35, 5 },
-          'MACD(16,97,2)' => ->(b, p) { MACD.new b, p, 16, 97, 2 },
           'MACD(13,17,9)' => ->(b, p) { MACD.new b, p, 13, 17, 9 },
           'MACD(12,26,9) filtered' => ->(b, p) { FilteredMACD.new b, p, 12, 26, 9 },
           'MACD(5,35,5) filtered' => ->(b, p) { FilteredMACD.new b, p, 5, 35, 5 },
@@ -46,8 +49,23 @@ module Cryptobroker::Indicator
           'DEMA(50,100)' => ->(b, p) { DEMA.new b, p, 50, 100 },
           'DEMA(21,55) filtered' => ->(b, p) { FilteredDEMA.new b, p, 21, 55 },
           'DEMA(50,100) filtered' => ->(b, p) { FilteredDEMA.new b, p, 50, 100 },
+          'MACD(12,26,9) with DEMA' => ->(b, p) { MACDWithDEMA.new b, p, 12, 26, 9 },
+          'MACD(5,35,5) with DEMA' => ->(b, p) { MACDWithDEMA.new b, p, 5, 35, 5 },
+          'MACD(13,17,9) with DEMA' => ->(b, p) { MACDWithDEMA.new b, p, 13, 17, 9 },
+          'MACD(12,26,9) with DEMA filtered' => ->(b, p) { FilteredMACDWithDEMA.new b, p, 12, 26, 9 },
+          'MACD(5,35,5) with DEMA filtered' => ->(b, p) { FilteredMACDWithDEMA.new b, p, 5, 35, 5 },
+          'MACD(13,17,9) with DEMA filtered' => ->(b, p) { FilteredMACDWithDEMA.new b, p, 13, 17, 9 },
+          'MACD(16,97,2) with DEMA filtered' => ->(b, p) { FilteredMACDWithDEMA.new b, p, 16, 97, 2 },
+          'MACD(12,26,9) on DEMA(8)' => ->(b, p) { MACDOnDEMA.new b, p, 12, 26, 9, 8 },
+          'MACD(5,35,5) on DEMA(8)' => ->(b, p) { MACDOnDEMA.new b, p, 5, 35, 5, 8 },
+          'MACD(13,17,9) on DEMA(8)' => ->(b, p) { MACDOnDEMA.new b, p, 13, 17, 9, 8 },
+          'MACD(16,97,2) on DEMA(8)' => ->(b, p) { MACDOnDEMA.new b, p, 16, 97, 2, 8 },
+          'MACD(12,26,9) on DEMA(5)' => ->(b, p) { MACDOnDEMA.new b, p, 12, 26, 9, 5 },
+          'MACD(5,35,5) on DEMA(5)' => ->(b, p) { MACDOnDEMA.new b, p, 5, 35, 5, 5 },
+          'MACD(13,17,9) on DEMA(5)' => ->(b, p) { MACDOnDEMA.new b, p, 13, 17, 9, 5 },
+          'Random' => ->(b, p) { Random.new b, p },
       }
-      @prng = Random.new
+      @prng = ::Random.new
     end
 
     def judge(trades)
@@ -87,8 +105,9 @@ module Cryptobroker::Indicator
                 result << po
                 2.times { result << po } if broker.price == price
               end
-              result.sort!
-              Score.new middle(result.map &:amount), middle(result.map &:transactions)
+              # result.sort!
+              # Score.new middle(result.map &:amount), middle(result.map &:transactions)
+              Score.new mean(result.map &:amount), mean(result.map &:transactions)
             end
             samples_scores.sort!
             amounts = samples_scores.map &:amount
