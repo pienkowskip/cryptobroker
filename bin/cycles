@@ -3,94 +3,28 @@
 require 'cryptobroker'
 
 app = Cryptobroker.new('../config.yml')
+cycles = app.cycles
 
-# class Edge
-#   attr_reader :beginning, :ending, :market, :direction
-#
-#   def initialize(beginning, ending, market, direction)
-#     @beginning = beginning
-#     @ending = ending
-#     @market = market
-#     @direction = direction
-#   end
-# end
-
-class Vertex
-  attr_reader :id, :code, :adjacent, :path
-
-  def initialize(id, code)
-    @id = id
-    @code = code
-    @visited = false
-    @adjacent = []
+top_ten = []
+cycles.each_with_index do |cycle,i|
+  puts "=== cycle ##{i} ==="
+  cycle.each do |e|
+    top_ten << [e[:change], cycle] unless e[:change].nil?
+    puts '===== PROFITABLE CYCLE FOUND =====' if e[:end].nil? && e[:start].nil? && e[:end] > e[:start]
+    puts '%s: %.3f => %.3f (%+.0f%%)' % [e[:currency], e[:start] || 0, e[:end] || 0, e[:change] || 0]
   end
-
-  def visited?
-    !!@visited
-  end
-
-  def add_edge(vertex)
-    @adjacent.push(vertex)
-    vertex.adjacent.push(self)
-  end
-
-  def visit(path)
-    @visited = true
-    @path = Array.new(path)
-  end
+  puts
 end
 
-graph = {}
+top_ten = top_ten.sort_by {|i|i[0]}.reverse.slice(0, 10)
 
-Currency.all.each { |curr| graph[curr.id] = Vertex.new curr.id, curr.code }
-markets = {}
-Exchange.first.markets.preload(:base, :quote).each do |market|
-  graph[market.base_id].add_edge graph[market.quote_id]
-  markets[[market.base_id, market.quote_id]] = market
-  markets[[market.quote_id, market.base_id]] = market
-end
-
-graph.delete_if { |_,curr| curr.adjacent.empty? }
-
-def pr(path)
+print_cycle = ->(cycle) do
   p = ''
-  path.each { |w|
-    # p += "m:#{w.market.base.code}/#{w.market.quote.code}(#{w.market.id}) " if w.is_a? Edge
-    p += "#{w.code}(#{w.id}) " #if w.is_a? Vertex
-  }
+  cycle.each do |i|
+    p += i[:currency] + ' => '
+  end
   p
 end
 
-def prv(v, path)
-  "#{'%-5s' % v.code}: #{pr(path)}"
-end
-
-def dfs(vertex, path, set)
-  path.push(vertex)
-  vertex.visit(path)
-  vertex.adjacent.each do |v|
-    if v.visited?
-      short, long = [path, v.path].sort_by { |i| i.size }
-      set.add(long.last(long.size + 1 - short.size))
-    else
-      dfs(v, path, set)
-    end
-  end
-  path.pop
-end
-
-set=Set.new
-dfs(graph.values.first, [], set)
-
-cycles = set.select { |p| p.size > 2 }
-
-cycles.each { |c| puts pr(c) }
-puts cycles.size
-
-market_set = Set.new
-cycles.each do |cycle|
-  cycle = cycle + [cycle.first]
-  cycle.each_cons(2) { |b,e| market_set.add markets[[b.id, e.id]] }
-end
-market_set.each { |m| puts m.couple }
-puts market_set.size
+puts '=== Top ten ==='
+top_ten.each { |ch,cycle| puts '%+6.1f%%: %s' % [ch, print_cycle[cycle]] }

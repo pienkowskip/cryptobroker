@@ -21,6 +21,15 @@ module Cryptobroker::API
       @http_client.continue_timeout = TIMEOUT
     end
 
+    def orders(couple)
+      orders = api_call('order_book', {}, false, couple)
+      orders[:timestamp] = Time.at(Integer(orders.delete('timestamp')))
+      map = ->(ar) { ar.map { |price,amount| [price.to_d, amount.to_d] }.sort_by { |i| i[0] } }
+      orders[:asks] = map[orders.delete('asks')]
+      orders[:bids] = map[orders.delete('bids')].reverse
+      orders
+    end
+
     def trades(since, couple)
       param = since.nil? ? {} : {since: since.to_s}
       api_call('trade_history', param, false, couple)

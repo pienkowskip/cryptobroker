@@ -2,6 +2,7 @@ require_relative './cryptobroker/version'
 require_relative './cryptobroker/config'
 require_relative './cryptobroker/database'
 require_relative './cryptobroker/ohlcv'
+require_relative './cryptobroker/cycles_detector/detector'
 
 class Cryptobroker
   DELAY_PER_RQ = 3
@@ -12,14 +13,19 @@ class Cryptobroker
     Database.init(@config.database[:development])
   end
 
-  def trace
-    markets = Market.preload(:exchange, :base, :quote).where(traced: true)
+  def load_apis(markets)
     apis = {}
     markets.each { |market| apis[market.exchange.api] = nil }
     apis.each do |api,_|
       require_relative './cryptobroker/api/' + api
       apis[api] = ('Cryptobroker::API::' + api.camelize).constantize.new(@config.auth[api.to_sym])
     end
+    apis
+  end
+
+  def trace
+    markets = Market.preload(:exchange, :base, :quote).where(traced: true)
+    apis = load_apis(markets)
     loop do
       rq = 0
       start = Time.now
@@ -44,6 +50,12 @@ class Cryptobroker
       delay = rq * DELAY_PER_RQ - (Time.now - start)
       sleep delay if delay > 0
     end
+  end
+
+  def cycles
+    markets = Exchange.first.markets.preload(:base, :quote)
+    detector = CyclesDetector::Detector.new markets, load_apis(markets)
+    detector.start
   end
 
   def trades
