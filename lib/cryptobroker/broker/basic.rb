@@ -4,16 +4,16 @@ module Cryptobroker::Broker
       attr_accessor :base, :quote
 
       def initialize(b, q)
-        @base = BigDecimal.new b
-        @quote = BigDecimal.new q
+        @base = b.to_d
+        @quote = q.to_d
       end
 
       def empty_base
-        @base = BigDecimal.new 0
+        @base = 0.to_d
       end
 
       def empty_quote
-        @quote = BigDecimal.new 0
+        @quote = 0.to_d
       end
     end
 
@@ -28,30 +28,34 @@ module Cryptobroker::Broker
       @balance = @type == :base ? Balance.new(amount, 0) : Balance.new(0, amount)
       @market = market
       @tr = 0
-      update_last
     end
 
     def pay_out
-      @last
+      last_price = @market.last.send @price
+      if @type == :base && @balance.quote > 0
+        transaction :buy_all, nil, nil, last_price
+      elsif @type == :quote && @balance.base > 0
+        transaction :sell_all, nil, nil, last_price
+      end
+      {amount: @balance.send(@type), transactions: @tr}
     end
 
     def sell(timestamp, params = {})
-      price = find_price timestamp, params
-      return if price.nil?
-      @tr += 1
-      update_last if @type == :base
-      sell_all price
+      transaction :sell_all, timestamp, params
     end
 
     def buy(timestamp, params = {})
-      price = find_price timestamp, params
-      return if price.nil?
-      @tr += 1
-      update_last if @type == :quote
-      buy_all price
+      transaction :buy_all, timestamp, params
     end
 
     protected
+
+    def transaction(tr_method, timestamp, params = {}, price = nil)
+      price = find_price timestamp, params if price.nil?
+      return if price.nil?
+      @tr += 1
+      send tr_method, price
+    end
 
     def buy_all(price)
       @balance.base += @balance.quote / price
@@ -70,10 +74,6 @@ module Cryptobroker::Broker
       chunk = @market[params[:idx]+1]
       return nil if chunk.nil?
       chunk.send @price
-    end
-
-    def update_last
-      @last = {amount: @balance.send(@type), transactions: @tr}
     end
   end
 end

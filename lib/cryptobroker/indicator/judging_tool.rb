@@ -124,7 +124,7 @@ module Cryptobroker::Indicator
           results[[period,price]] = {scores: scores, samples: samples.size}
           [:median, :mean].each do |sym|
             puts "== order by #{sym} =="
-            list = scores.sort_by { |k,v| v[sym].amount }
+            list = scores.sort_by { |_,v| v[sym].amount }
             list.reverse_each do |name, score|
               sc = score[sym]
               sd = score[:"#{sym}_sd"]
