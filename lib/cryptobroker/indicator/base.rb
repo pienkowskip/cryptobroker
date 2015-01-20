@@ -5,9 +5,15 @@ module Cryptobroker::Indicator
     include ::Indicator
     include ::Indicator::AutoGen
 
+    attr_reader :startup
+
     def initialize(brokers, price = :median)
       @brokers = brokers
       @price = price
+    end
+
+    def name
+      'Base'
     end
 
     protected

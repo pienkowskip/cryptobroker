@@ -1,10 +1,17 @@
 module Cryptobroker::Indicator
   module HistogramBasedFiltered
+
+    def name
+      'filtered ' + super
+    end
+
     def run(chart)
       @last_sig = nil
+      @startup = nil
       hist = histogram(chart)
       hist.each_cons(3).with_index do |elms,i|
         unless elms.any? &:nil?
+          @startup = i+2 if @startup.nil?
           if elms[0] < 0 && elms[1] >= 0 && elms[2] >= 0
             signal :buy, chart[i+2].end, i+2
           elsif elms[0] > 0 && elms[1] <= 0 && elms[2] <= 0

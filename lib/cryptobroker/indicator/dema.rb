@@ -11,6 +11,10 @@ module Cryptobroker::Indicator
       @long_dema = Dema.new long
     end
 
+    def name
+      "DEMA(#{@short_dema.time_period},#{@long_dema.time_period})"
+    end
+
     def histogram(chart)
       price = price chart
       short = shift_nils @short_dema.run price

@@ -4,7 +4,7 @@ module Cryptobroker::Broker
   class TransactionFee < Basic
     def initialize(type = :base, pr = :median, fee = 0.002)
       super type, pr
-      @fee_factor = 1 - fee
+      @fee_factor = (1 - fee).to_d
     end
 
     protected

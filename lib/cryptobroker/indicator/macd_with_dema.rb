@@ -13,6 +13,10 @@ module Cryptobroker::Indicator
       @macd = Macd.new fast, slow, signal
     end
 
+    def name
+      "MACD(#{@macd.slow_period},#{@macd.fast_period},#{@macd.signal_period}) with DEMA"
+    end
+
     def histogram(chart)
       price = price chart
       fast = shift_nils @fast.run price

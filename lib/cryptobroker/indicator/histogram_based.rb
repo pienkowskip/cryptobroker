@@ -7,8 +7,10 @@ module Cryptobroker::Indicator
     def run(chart)
       hist = histogram(chart)
       last = nil
+      @startup = nil
       hist.each_with_index do |v,i|
         unless last.nil? || v.nil?
+          @startup = i if @startup.nil?
           if last < 0 && v >= 0
             signal :buy, chart[i].end, i
           elsif last > 0 && v <= 0

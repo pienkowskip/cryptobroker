@@ -10,6 +10,10 @@ module Cryptobroker::Indicator
       @dema = Dema.new dema
     end
 
+    def name
+      "MACD(#{@macd.slow_period},#{@macd.fast_period},#{@macd.signal_period}) on DEMA(#{@dema.time_period})"
+    end
+
     def histogram(chart)
       price = price chart
       price = @dema.run price
