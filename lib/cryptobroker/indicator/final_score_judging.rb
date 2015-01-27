@@ -5,15 +5,15 @@ module Cryptobroker::Indicator
   class FinalScoreJudging < JudgingTool
     class Score
       include Comparable
-      attr_reader :amount, :transactions, :periods
+      attr_reader :amount, :transactions, :timeframes
 
-      def initialize(a, t, p = nil)
+      def initialize(a, t, tfs = nil)
         @amount = a
         @transactions = t
-        @periods = p
-        unless @periods.nil?
-          @amount /= @periods
-          @transactions /= @periods
+        @timeframes = tfs
+        unless @timeframes.nil?
+          @amount /= @timeframes
+          @transactions /= @timeframes
         end
       end
 
@@ -24,8 +24,9 @@ module Cryptobroker::Indicator
       end
     end
 
-    def initialize(start_amount, periods, min_periods, transaction_fee)
-      super start_amount, periods, min_periods
+    def initialize(start_amount, timeframes, min_sample_bars, transaction_fee)
+      super timeframes, min_sample_bars
+      @start_amount = start_amount
       @brokers = {}
       @prices.each do |p|
         @brokers[p] = [
@@ -37,26 +38,32 @@ module Cryptobroker::Indicator
 
     def judge(trades)
       results = {}
-      @periods.each do |period|
+      timer = Timer.new
+      @timeframes.each do |timeframe|
+        timer.start
         samples = []
-        add_sample = ->(sample) { samples << sample if sample.size >= @min_periods }
+        add_sample = ->(sample) { samples << sample if sample.size >= @min_sample_bars }
         trades.each do |trade|
           ts = trade.first.timestamp
-          [0, rand(1..(period-1).to_i)].each do |offset|
-            chart = ohlcv(trade, period, ts + offset)
+          [0, rand(1..(timeframe-1).to_i)].each do |offset|
+            chart = ohlcv(trade, timeframe, ts + offset)
             add_sample[chart]
-            add_sample[cut_chart(chart, 0.6, 0.7)] if chart.size * 0.7 >= @min_periods
-            add_sample[cut_chart(chart, 0.4, 0.5)] if chart.size * 0.5 >= @min_periods
+            add_sample[cut_chart(chart, 0.6, 0.7)] if chart.size * 0.7 >= @min_sample_bars
+            add_sample[cut_chart(chart, 0.4, 0.5)] if chart.size * 0.5 >= @min_sample_bars
           end
         end
+        samples_bars = samples.map { |s| s.size}.reduce(0, :+)
+        timer.finish
+        logger.debug { timer.enhance 'Created %d samples (%d bars).' % [samples.size, samples_bars] }
         @prices.each do |price|
           puts "\n"
-          puts '=== period: %.1fm, samples: %d, price: %s ===' % [period / 60.0, samples.size, price]
+          puts '=== timeframe: %.1fm, samples: %d (%d bars), price: %s ===' % [timeframe / 60.0, samples.size, samples_bars, price]
           scores = {}
           if samples.empty?
-            results[[period,price]] = {scores: scores, samples: samples.size}
+            results[[timeframe,price]] = {scores: scores, samples: {count: samples.size, bars: samples_bars}}
             next
           end
+          timer.start
           @indicators.each do |indicator|
             brokers = @brokers[price]
             indicator = indicator[brokers, price]
@@ -71,7 +78,7 @@ module Cryptobroker::Indicator
               end
             end
             result.sort!
-            weights = result.map &:periods
+            weights = result.map &:timeframes
             amounts = result.map(&:amount).zip(weights)
             trs = result.map(&:transactions).zip(weights)
             result = {
@@ -83,7 +90,9 @@ module Cryptobroker::Indicator
             result[:mean_sd] = sd[result[:mean]]
             scores[indicator.name] = result
           end
-          results[[period,price]] = {scores: scores, samples: samples.size}
+          timer.finish
+          logger.debug { timer.enhance 'Measured performance of %d indicators on %d samples (%d bars).' % [@indicators.size, samples.size, samples_bars] }
+          results[[timeframe,price]] = {scores: scores, samples: {count: samples.size, bars: samples_bars}}
           max_name = scores.keys.map { |i| i.length }.max
           [:median, :mean].each do |sym|
             puts "== order by #{sym} =="
@@ -96,6 +105,7 @@ module Cryptobroker::Indicator
           end
         end
       end
+      results
     end
 
     private

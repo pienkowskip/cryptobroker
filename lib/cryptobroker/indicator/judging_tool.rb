@@ -7,17 +7,17 @@ require_relative './dema'
 require_relative './filtered_dema'
 require_relative './random'
 require_relative '../statistics'
+require_relative '../logging'
 
 module Cryptobroker::Indicator
   class JudgingTool
     extend Cryptobroker::Statistics
+    include Cryptobroker::Logging
 
-    def initialize(start_amount, periods, min_periods)
-      @start_amount = start_amount
-      @periods = periods
-      # @prices = [:open, :close, :median, :weighted]
+    def initialize(timeframes, min_sample_bars)
+      @timeframes = timeframes
       @prices = [:median, :weighted]
-      @min_periods = min_periods
+      @min_sample_bars = min_sample_bars
       @indicators = [
       ->(b, p) { MACD.new b, p, 12, 26, 9 },
       ->(b, p) { MACD.new b, p, 5, 35, 5 },
@@ -55,8 +55,8 @@ module Cryptobroker::Indicator
       @prng.rand *args
     end
 
-    def ohlcv(trade, period, starts = nil, ends = nil)
-      Cryptobroker::OHLCV.create trade, period, starts, ends, false
+    def ohlcv(trade, timeframe, starts = nil, ends = nil)
+      Cryptobroker::OHLCV.create trade, timeframe, starts, ends, false
     end
   end
 end
