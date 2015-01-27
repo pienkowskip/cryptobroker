@@ -44,7 +44,7 @@ class Cryptobroker::Database
       end
     end
 
-    Dir.glob(File.dirname(__FILE__) + '/models/*.rb').each { |model| require_relative model }
+    Dir.glob(File.dirname(__FILE__) + '/model/*.rb').each { |model| require_relative model }
 
     ActiveRecord::Base.establish_connection(config)
     ActiveRecord::Base.logger = Logger.new(STDOUT)

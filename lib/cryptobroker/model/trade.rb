@@ -1,3 +1,4 @@
+module Cryptobroker::Model
 class Trade < ActiveRecord::Base
   belongs_to :market
 
@@ -9,3 +10,4 @@ class Trade < ActiveRecord::Base
   validates_class :timestamp, class: [Time, DateTime]
   validates :tid, numericality: { only_integer: true }, allow_nil: true
 end
+  end

@@ -24,7 +24,7 @@ class Cryptobroker
   end
 
   def trace
-    markets = Market.preload(:exchange, :base, :quote).where(traced: true)
+    markets = Model::Market.preload(:exchange, :base, :quote).where(traced: true)
     apis = load_apis(markets)
     loop do
       rq = 0
@@ -43,8 +43,8 @@ class Cryptobroker
         rescue
           retry if rt > 0
         end
-        Trade.transaction do
-          Trade.create(trades.map { |t| t[:market] = market ; t })
+        Model::Trade.transaction do
+          Model::Trade.create(trades.map { |t| t[:market] = market ; t })
         end unless trades.empty?
       end
       delay = rq * DELAY_PER_RQ - (Time.now - start)
@@ -53,20 +53,20 @@ class Cryptobroker
   end
 
   def cycles
-    markets = Exchange.first.markets.preload(:base, :quote)
+    markets = Model::Exchange.first.markets.preload(:base, :quote)
     detector = CyclesDetector::Detector.new markets, load_apis(markets)
     detector.start
   end
 
   def trades
     markets = {}
-    Market.preload(:base, :quote).where(traced: true).each do |market|
-      markets[market.couple] = Trade.unscoped.where(market: market).order(:timestamp).load
+    Model::Market.preload(:base, :quote).where(traced: true).each do |market|
+      markets[market.couple] = Model::LightTrade.map Model::Trade.unscoped.where(market: market).order(:timestamp)
     end
     markets
   end
 
   def ohlcv(market_id, period, starts = nil, ends = nil)
-    OHLCV.create Trade.unscoped.where(market: market_id).order(:timestamp).load, period, starts, ends, false
+    OHLCV.create Model::LightTrade.map(Model::Trade.unscoped.where(market: market_id).order(:timestamp)), period, starts, ends, false
   end
 end

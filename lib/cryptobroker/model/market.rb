@@ -1,3 +1,4 @@
+module Cryptobroker::Model
 class Market < ActiveRecord::Base
   belongs_to :exchange
   belongs_to :base, class_name: 'Currency'
@@ -11,3 +12,4 @@ class Market < ActiveRecord::Base
     base.code + '/' + quote.code
   end
 end
+  end

@@ -25,7 +25,7 @@ class Migrate < Cryptobroker
   end
 
   def init_data
-    currencies_array = Currency.create([
+    currencies_array = Model::Currency.create([
                         {code: 'BTC', name: 'Bitcoin', crypto: true},
                         {code: 'GHS', name: 'Gigahash', crypto: true},
                         {code: 'LTC', name: 'Litecoin', crypto: true},
@@ -47,13 +47,13 @@ class Migrate < Cryptobroker
                         {code: 'USDE', name: 'USDE', crypto: true},
                         {code: 'MYR', name: 'MYR', crypto: true},
                     ])
-    # currencies_array = Currency.all
+    # currencies_array = Model::Currency.all
     currencies = {}
     currencies_array.each { |currency| currencies[currency.code] = currency }
-    cex = Exchange.create({name: 'cex.io', api: 'cexio'})
-    # cex = Exchange.first
+    cex = Model::Exchange.create({name: 'cex.io', api: 'cexio'})
+    # cex = Model::Exchange.first
     market = ->(curr1, curr2) { {exchange: cex, base: currencies[curr1], quote: currencies[curr2], traced: true} }
-    Market.create([
+    Model::Market.create([
                       market['BTC', 'USD'],
                       market['GHS', 'USD'],
                       market['LTC', 'USD'],
@@ -65,7 +65,7 @@ class Migrate < Cryptobroker
                       market['GHS', 'LTC'],
                   ])
     market = ->(curr1, curr2) { {exchange: cex, base: currencies[curr1], quote: currencies[curr2], traced: false} }
-    Market.create([
+    Model::Market.create([
                       market['DOGE', 'USD'],
                       market['DRK', 'USD'],
                       market['DOGE', 'EUR'],
