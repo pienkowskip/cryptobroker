@@ -1,4 +1,4 @@
-require_relative './logging'
+require_relative 'logging'
 
 class Cryptobroker::Database
   def self.init(config)

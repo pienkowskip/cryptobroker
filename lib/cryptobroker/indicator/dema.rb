@@ -1,5 +1,5 @@
-require_relative './histogram_based'
-require_relative './plot'
+require_relative 'histogram_based'
+require_relative 'plot'
 
 module Cryptobroker::Indicator
   class DEMA

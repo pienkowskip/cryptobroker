@@ -1,4 +1,4 @@
-require_relative './base'
+require_relative 'base'
 
 module Cryptobroker::Indicator
   class Random

@@ -1,4 +1,4 @@
-require_relative './histogram_based'
+require_relative 'histogram_based'
 
 module Cryptobroker::Indicator
   class MACDOnDEMA

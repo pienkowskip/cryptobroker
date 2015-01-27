@@ -1,4 +1,4 @@
-require_relative './vertex'
+require_relative 'vertex'
 
 module Cryptobroker::CyclesDetector
   class Graph

@@ -1,6 +1,6 @@
-require_relative './graph'
-require_relative './balance_log'
-require_relative './market_orders'
+require_relative 'graph'
+require_relative 'balance_log'
+require_relative 'market_orders'
 require_relative '../logging'
 
 module Cryptobroker::CyclesDetector

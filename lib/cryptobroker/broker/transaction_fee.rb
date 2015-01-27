@@ -1,4 +1,4 @@
-require_relative './basic'
+require_relative 'basic'
 
 module Cryptobroker::Broker
   class TransactionFee < Basic

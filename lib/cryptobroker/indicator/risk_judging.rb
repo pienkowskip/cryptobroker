@@ -1,4 +1,4 @@
-require_relative './judging_tool'
+require_relative 'judging_tool'
 require_relative '../broker/relative'
 
 module Cryptobroker::Indicator
@@ -39,6 +39,9 @@ module Cryptobroker::Indicator
         cov / (self.length * vector.length)
       end
     end
+
+    CORR_QUALIFIED = 5
+    CORR_SHOWN = 10
 
     def initialize(timeframes, min_sample_bars, transaction_fee)
       super timeframes, min_sample_bars
@@ -113,16 +116,17 @@ module Cryptobroker::Indicator
           list.each do |name, score|
             puts "%-#{max_name}s %+.6f%% (drawdown: %+.4f%%)" % [name, score[:mean], score[:drawdown]]
           end
-          puts '== correlations (lowest 10 of first 5 indicators) =='
+          puts "== correlations (top #{CORR_SHOWN} pairs from first #{CORR_QUALIFIED} indicators) =="
           timer.start
-          correlations = list.first(5).combination(2).map do |a,b|
-            [a[1][:vector].correlation(b[1][:vector]), a[0], b[0]]
+          top = list.first(CORR_QUALIFIED).map { |name,score| [name, score[:vector]] }
+          scores.values { |score| score.delete :vector }
+          correlations = top.combination(2).map do |a,b|
+            [a[1].correlation(b[1]), a[0], b[0]]
           end
           timer.finish
-          logger.debug { timer.enhance 'Calculated correlations of %d vector pairs in %d-dim space.' % [correlations.size, list.first[1][:vector].dim] }
+          logger.debug { timer.enhance 'Calculated correlations of %d vector pairs in %d-dim space.' % [correlations.size, top.first[1].dim] }
           correlations.sort_by! { |correlation,_,_| correlation }
-          correlations.first(10).each { |i| puts '%+.4f: %s & %s' % i }
-          scores.values { |score| score.delete :vector }
+          correlations.first(CORR_SHOWN).each { |i| puts '%+.4f: %s & %s' % i }
           results[[timeframe,price]] = {
               scores: scores,
               correlations: [],

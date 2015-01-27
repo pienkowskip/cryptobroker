@@ -1,9 +1,9 @@
-require_relative './cryptobroker/version'
-require_relative './cryptobroker/config'
-require_relative './cryptobroker/database'
-require_relative './cryptobroker/ohlcv'
-require_relative './cryptobroker/cycles_detector/detector'
-require_relative './cryptobroker/logging'
+require_relative 'cryptobroker/version'
+require_relative 'cryptobroker/config'
+require_relative 'cryptobroker/database'
+require_relative 'cryptobroker/ohlcv'
+require_relative 'cryptobroker/cycles_detector/detector'
+require_relative 'cryptobroker/logging'
 
 class Cryptobroker
   include Logging
@@ -19,7 +19,7 @@ class Cryptobroker
     apis = {}
     markets.each { |market| apis[market.exchange.api] = nil }
     apis.each do |api,_|
-      require_relative './cryptobroker/api/' + api
+      require_relative 'cryptobroker/api/' + api
       apis[api] = ('Cryptobroker::API::' + api.camelize).constantize.new(@config.auth[api.to_sym])
     end
     apis
