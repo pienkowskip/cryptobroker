@@ -1,11 +1,13 @@
 require_relative './graph'
 require_relative './balance_log'
 require_relative './market_orders'
+require_relative '../logging'
 
 module Cryptobroker::CyclesDetector
   class Detector
+    include Cryptobroker::Logging
+
     def initialize(markets, apis)
-      @logger = Logger.new(STDOUT)
       currencies = {}
       add_curr = ->(curr) { currencies[curr.id] = curr unless currencies.include? curr.id}
       markets.each { |market| add_curr[market.base] ; add_curr[market.quote] }
@@ -40,12 +42,12 @@ module Cryptobroker::CyclesDetector
     end
 
     def start
-      spent = Time.now
+      timer = Timer.new.start
       @markets.values.each { |market| market.update }
-      spent = Time.now - spent
-      @logger.debug(self.class.to_s) { "Updated #{@markets.size} markets in #{spent} seconds." }
+      timer.finish
+      logger.debug { timer.enhance "Updated #{@markets.size} markets." }
 
-      spent = Time.now
+      timer.start
       start = {
           'USD' => 10,
           'EUR' => 10,
@@ -73,8 +75,8 @@ module Cryptobroker::CyclesDetector
           i += 2
         end
       end
-      spent = Time.now - spent
-      @logger.debug(self.class.to_s) { "Checked #{@cycles.size} cycles in #{spent} seconds." }
+      timer.finish
+      logger.debug { timer.enhance "Checked #{@cycles.size} cycles." }
 
       @cycles.map do |cycle|
         result = []

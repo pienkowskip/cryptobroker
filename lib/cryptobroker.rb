@@ -3,8 +3,10 @@ require_relative './cryptobroker/config'
 require_relative './cryptobroker/database'
 require_relative './cryptobroker/ohlcv'
 require_relative './cryptobroker/cycles_detector/detector'
+require_relative './cryptobroker/logging'
 
 class Cryptobroker
+  include Logging
   DELAY_PER_RQ = 3
   RETRIES = 2
 
@@ -43,9 +45,12 @@ class Cryptobroker
         rescue
           retry if rt > 0
         end
-        Model::Trade.transaction do
-          Model::Trade.create(trades.map { |t| t[:market] = market ; t })
-        end unless trades.empty?
+        unless trades.empty?
+          Model::Trade.transaction do
+            Model::Trade.create(trades.map { |t| t[:market] = market ; t })
+          end
+          logger.info { '%d trades fetched from [%s] market of [%s] exchange and inserted to database.' % [trades.size, market.couple, market.exchange.name] }
+        end
       end
       delay = rq * DELAY_PER_RQ - (Time.now - start)
       sleep delay if delay > 0

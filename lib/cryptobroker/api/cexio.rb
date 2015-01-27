@@ -5,14 +5,16 @@ require 'net/https'
 require 'uri'
 require 'json'
 require 'addressable/uri'
+require_relative '../logging'
 
 module Cryptobroker::API
   class Cexio
+    include Cryptobroker::Logging
+
     def initialize(auth)
       @username = auth[:username]
       @api_key = auth[:api_key]
       @api_secret = auth[:api_secret]
-      @logger = Logger.new(STDOUT)
       @api_uri = URI.parse(API_URL)
       @http_client = Net::HTTP.new(@api_uri.host, @api_uri.port)
       @http_client.use_ssl = true
@@ -69,7 +71,7 @@ module Cryptobroker::API
     end
 
     def post(path, param)
-      @logger.debug(self.class.to_s) { "Posting to URI '#{path}' params: #{param}." }
+      logger.debug { "Posting to URI [#{path}] params: #{param}." }
       params = Addressable::URI.new
       params.query_values = param
       @http_client.post(path, params.query).body
