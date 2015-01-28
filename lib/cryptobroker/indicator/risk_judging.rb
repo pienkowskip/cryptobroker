@@ -114,7 +114,8 @@ module Cryptobroker::Indicator
           max_name = scores.keys.map { |i| i.length }.max
           list = scores.sort_by { |_,v| v[:mean] }.reverse
           list.each do |name, score|
-            puts "%-#{max_name}s %+.6f%% (drawdown: %+.4f%%)" % [name, score[:mean], score[:drawdown]]
+            percents = [score[:mean], score[:mean] * HOUR_TF / timeframe, score[:drawdown]].map { |p| p * 100 }
+            puts "%-#{max_name}s %+.6f%% | %+.4f%%/h | drawdown: %+.4f%%" % ([name] + percents)
           end
           puts "== correlations (top #{CORR_SHOWN} pairs from first #{CORR_QUALIFIED} indicators) =="
           timer.start

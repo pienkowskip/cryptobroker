@@ -100,7 +100,9 @@ module Cryptobroker::Indicator
             list.reverse_each do |name, score|
               sc = score[sym]
               sd = score[:"#{sym}_sd"]
-              puts "%-#{max_name}s %+.6f%% (trs: %4.1f%%) [sd: %.7f%% (trs: %6.3f%%)]" % [name, sc.amount * 100, sc.transactions * 100, sd.amount * 100, sd.transactions * 100]
+              percents = [sc.amount, sd.amount, sc.amount * HOUR_TF / timeframe, sd.amount * HOUR_TF / timeframe, sc.transactions, sd.transactions]
+              percents.map! { |p| p * 100 }
+              puts "%-#{max_name}s %+.6f%% (sd: %.7f%%) | %+.4f%%/h (sd: %.5f%%/h) | trs: %4.1f%% (sd: %6.3f%%)" % ([name] + percents)
             end
           end
         end

@@ -14,6 +14,8 @@ module Cryptobroker::Indicator
     extend Cryptobroker::Statistics
     include Cryptobroker::Logging
 
+    HOUR_TF = 60 * 60
+
     def initialize(timeframes, min_sample_bars)
       @timeframes = timeframes
       @prices = [:median, :weighted]
