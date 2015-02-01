@@ -8,23 +8,15 @@ cycles = app.cycles
 top_ten = []
 cycles.each_with_index do |cycle,i|
   puts "=== cycle ##{i} ==="
-  cycle.each do |e|
-    top_ten << [e[:change], cycle] unless e[:change].nil?
+  cycle.each_with_index do |e,ei|
+    top_ten << [e[:change], cycle.cycle(2).to_a.slice(ei, cycle.size).map { |c| c[:currency] }] unless e[:change].nil?
     puts '===== PROFITABLE CYCLE FOUND =====' if e[:end].nil? && e[:start].nil? && e[:end] > e[:start]
-    puts '%s: %.3f => %.3f (%+.0f%%)' % [e[:currency], e[:start] || 0, e[:end] || 0, e[:change] || 0]
+    puts '%s: %.3f => %.3f (%+.1f%%)' % [e[:currency], e[:start] || 0, e[:end] || 0, e[:change] || 0]
   end
   puts
 end
 
-top_ten = top_ten.sort_by {|i|i[0]}.reverse.slice(0, 10)
-
-print_cycle = ->(cycle) do
-  p = ''
-  cycle.each do |i|
-    p += i[:currency] + ' => '
-  end
-  p
-end
+top_ten = top_ten.sort_by { |i| i[0] }.reverse.slice(0, 10)
 
 puts '=== Top ten ==='
-top_ten.each { |ch,cycle| puts '%+6.1f%%: %s' % [ch, print_cycle[cycle]] }
+top_ten.each { |ch,cycle| puts '%+7.3f%%: %s' % [ch, cycle.join(' => ')] }

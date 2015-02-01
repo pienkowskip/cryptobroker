@@ -6,7 +6,14 @@ require 'cryptobroker/indicator/risk_judging'
 
 app = Cryptobroker.new('../config.yml')
 trades = app.trades
-periods = [1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 7.5, 10, 15, 20, 30, 40, 60, 90].map { |p| p * 60 }
-# judging_tool = Cryptobroker::Indicator::FinalScoreJudging.new(100, periods.reverse, 1000, 0.002)
-judging_tool = Cryptobroker::Indicator::RiskJudging.new(periods.reverse, 1000, 0.002)
+timeframes = [1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 7.5, 10, 15, 20, 30, 40, 60, 90].map { |p| p * 60 }
+judging_tool =
+    case ARGV[0]
+      when 'risk'
+        Cryptobroker::Indicator::RiskJudging.new(timeframes.reverse, 1000, 0.002)
+      when 'final_score'
+        Cryptobroker::Indicator::FinalScoreJudging.new(100, timeframes.reverse, 1000, 0.002)
+      else
+        raise ArgumentError, 'invalid command line arguments'
+    end
 judging_tool.judge trades.values
