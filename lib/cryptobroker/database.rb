@@ -1,6 +1,8 @@
 require_relative 'logging'
 
 class Cryptobroker::Database
+  ENUM_TYPES = [:transaction_type]
+
   def self.init(config)
     require 'active_record'
 
@@ -50,5 +52,22 @@ class Cryptobroker::Database
 
     ActiveRecord::Base.establish_connection(config)
     ActiveRecord::Base.logger = Cryptobroker::Logging.logger_for ActiveRecord::Base.name
+
+    ENUM_TYPES.each do |type|
+      ActiveRecord::ConnectionAdapters::PostgreSQLAdapter::OID.alias_type type.to_s, 'text'
+    end
+
+    ActiveRecord::ConnectionAdapters::Column.class_eval do
+      private
+      def simplified_type_with_enum_type(type)
+        sym = type.to_sym
+        if ENUM_TYPES.include? sym
+          sym
+        else
+          simplified_type_without_enum_type type
+        end
+      end
+      alias_method_chain :simplified_type, :enum_type
+    end
   end
 end

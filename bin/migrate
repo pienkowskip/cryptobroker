@@ -17,11 +17,11 @@ class Migrate < Cryptobroker
   end
 
   def up
-    @migrations.each { |m| m.migrate(:up) }
+    @migrations.each { |m| m.migrate :up }
   end
 
   def down
-    @migrations.reverse_each { |m| m.migrate(:down) }
+    @migrations.reverse_each { |m| m.migrate :down }
   end
 
   def init_data
