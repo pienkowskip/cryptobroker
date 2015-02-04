@@ -43,7 +43,9 @@ module Cryptobroker::CyclesDetector
 
     def start
       timer = Timer.new.start
-      @markets.values.each { |market| market.update }
+      @markets.values.map do |market|
+        Thread.new { market.update }
+      end.each &:join
       timer.finish
       logger.debug { timer.enhance "Updated #{@markets.size} markets." }
 

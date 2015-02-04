@@ -7,8 +7,8 @@ gem 'activerecord'
 
 gem 'pg'
 
-gem 'addressable'
-
 gem 'ta-indicator'
 
 gem 'gnuplot'
+
+gem 'net-http-persistent'

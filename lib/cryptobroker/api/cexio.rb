@@ -1,10 +1,8 @@
 # -*- encoding : utf-8 -*-
 require 'openssl'
-require 'net/http'
-require 'net/https'
 require 'uri'
 require 'json'
-require 'addressable/uri'
+require 'net/http/persistent'
 require_relative '../logging'
 
 module Cryptobroker::API
@@ -15,12 +13,10 @@ module Cryptobroker::API
       @username = auth[:username]
       @api_key = auth[:api_key]
       @api_secret = auth[:api_secret]
-      @api_uri = URI.parse(API_URL)
-      @http_client = Net::HTTP.new(@api_uri.host, @api_uri.port)
-      @http_client.use_ssl = true
+      @http_client = Net::HTTP::Persistent.new self.class.name
       @http_client.read_timeout = TIMEOUT
       @http_client.open_timeout = TIMEOUT
-      @http_client.continue_timeout = TIMEOUT
+      @mutex = Mutex.new
     end
 
     def orders(couple)
@@ -35,8 +31,12 @@ module Cryptobroker::API
     def trades(since, couple)
       param = since.nil? ? {} : {since: since.to_s}
       api_call('trade_history', param, false, couple)
-              .map { |t| t['timestamp'] = Time.at(Integer(t.delete('date'))) ; t }
-              .reverse
+          .map { |t| t['timestamp'] = Time.at(Integer(t.delete('date'))) ; t }
+          .reverse
+    end
+
+    def balance
+      api_call 'balance', {}, true
     end
 
     private
@@ -45,15 +45,17 @@ module Cryptobroker::API
     TIMEOUT = 5
 
     def api_call(method, param = {}, priv = false, action = '', is_json = true)
-      url = "#{@api_uri.path}/#{method}/#{action}"
-      if priv
-        nonce
-        param.merge!(key: @api_key, signature: signature.to_s, nonce: @nonce)
+      url = "#{API_URL}/#{method}/#{action}"
+      begin
+        if priv
+          @mutex.lock
+          nonce
+          param.merge!(key: @api_key, signature: signature.to_s, nonce: @nonce)
+        end
+        answer = post(url, param)
+      ensure
+        @mutex.unlock if priv
       end
-      answer = post(url, param)
-
-      # unfortunately, the API does not always respond with JSON, so we must only
-      # parse as JSON if is_json is true.
       if is_json
         JSON.parse(answer)
       else
@@ -70,11 +72,14 @@ module Cryptobroker::API
       OpenSSL::HMAC.hexdigest(OpenSSL::Digest::Digest.new('sha256'), @api_secret, str)
     end
 
-    def post(path, param)
-      logger.debug { "Posting to URI [#{path}] params: #{param}." }
-      params = Addressable::URI.new
-      params.query_values = param
-      @http_client.post(path, params.query).body
+    def post(url, param)
+      logger.debug { "Posting to URL [#{url}] params: #{param}." }
+      url = URI url
+      post = Net::HTTP::Post.new url.path
+      post.set_form_data param
+      res = @http_client.request url, post
+      res.value
+      res.body
     end
   end
 end
