@@ -32,7 +32,6 @@ class Migrate < Cryptobroker
                         {code: 'NMC', name: 'Namecoin', crypto: true},
                         {code: 'USD', name: 'United States dollar', crypto: false},
                         {code: 'EUR', name: 'Euro', crypto: false},
-                        {code: 'PLN', name: 'Polish zloty', crypto: false},
                         {code: 'IXC', name: 'IXC', crypto: true},
                         {code: 'DRK', name: 'DRK', crypto: true},
                         {code: 'DOGE', name: 'DOGE', crypto: true},

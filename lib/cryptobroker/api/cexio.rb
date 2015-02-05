@@ -1,4 +1,3 @@
-# -*- encoding : utf-8 -*-
 require 'openssl'
 require 'uri'
 require 'json'
@@ -7,6 +6,7 @@ require_relative '../logging'
 
 module Cryptobroker::API
   class Cexio
+    class Error < Exception; end
     include Cryptobroker::Logging
 
     def initialize(auth)
@@ -57,10 +57,10 @@ module Cryptobroker::API
         @mutex.unlock if priv
       end
       if is_json
-        JSON.parse(answer)
-      else
-        answer
+        answer = JSON.parse(answer)
+        raise Error, answer['error'] if answer.include? 'error'
       end
+      answer
     end
 
     def nonce

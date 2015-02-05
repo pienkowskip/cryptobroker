@@ -16,7 +16,7 @@ class CreateTransactions < ActiveRecord::Migration
       end
     end
 
-    create_table :transaction do |t|
+    create_table :transactions do |t|
       t.references :balance, null: false, index: true
       t.column :type, :transaction_type, null: false
       t.decimal :amount, null: false
