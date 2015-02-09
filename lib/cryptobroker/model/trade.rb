@@ -2,7 +2,8 @@ module Cryptobroker::Model
   class Trade < ActiveRecord::Base
     belongs_to :market
 
-    default_scope -> { order :tid, :timestamp, :id }
+    default_scope -> { order :timestamp, :tid, :id }
+    scope :tid_ordered, -> { unscope(:order).order(:tid, :timestamp, :id) }
 
     validates_belongs :market
     validates :amount, :price, presence: true, numericality: { greater_than: 0 }

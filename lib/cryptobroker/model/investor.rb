@@ -3,8 +3,11 @@ module Cryptobroker::Model
     belongs_to :market
     has_many :balances, inverse_of: :investor, dependent: :destroy
 
+    scope :enabled, -> { where(enabled: true) }
+
     validates_belongs :market
     validates :name, presence: true, uniqueness: { scope: :market }
+    validates :enabled, inclusion: [true, false]
     validate :validate_getters
     validates :timeframe, presence: true, numericality: { only_integer: true, greater_than: 0 }
     validates_before_type_case :beginning, presence: true

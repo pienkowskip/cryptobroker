@@ -1,59 +1,49 @@
 require_relative 'cryptobroker/version'
 require_relative 'cryptobroker/config'
 require_relative 'cryptobroker/database'
+require_relative 'cryptobroker/downloader'
 require_relative 'cryptobroker/ohlcv'
 require_relative 'cryptobroker/cycles_detector/detector'
 require_relative 'cryptobroker/logging'
 
 class Cryptobroker
   include Logging
-  DELAY_PER_RQ = 3
+  DELAY_PER_MARKET = 4
   RETRIES = 2
 
   def initialize(config_file = 'config.yml')
     @config = Config.new(config_file)
     Database.init(@config.database[:development])
+    @apis = {}
   end
 
   def load_apis(markets)
     apis = {}
-    markets.each { |market| apis[market.exchange.api] = nil }
-    apis.each do |api,_|
-      require_relative 'cryptobroker/api/' + api
-      apis[api] = ('Cryptobroker::API::' + api.camelize).constantize.new(@config.auth[api.to_sym])
-    end
+    markets.map { |m| m.exchange.api }.uniq.each { |n| apis[n] = api n }
     apis
   end
 
+  def api(name)
+    return @apis[name] if @apis.include? name
+    require_relative 'cryptobroker/api/' + name
+    @apis[name] = ('Cryptobroker::API::' + name.camelize).constantize.new(@config.auth[name.to_sym])
+  end
+
+  def invest
+    # investors = Model::Investor.preload(market: [:exchange, :base, :quote]).enabled.load
+    @investors = Model::Investor.enabled.to_a
+    markets = @investors.map(&:market_id).uniq
+    # investors.each do |investor|
+    #   investor
+    # end
+  end
+
   def trace
-    markets = Model::Market.preload(:exchange, :base, :quote).where(traced: true)
-    apis = load_apis(markets)
+    markets = ActiveRecord::Base.with_connection { Model::Market.where(traced: true).pluck(:id) }
+    downloader = Downloader.new ->(name) { api name }, 5, markets
     loop do
-      rq = 0
-      start = Time.now
-      markets.each do |market|
-        api = apis[market.exchange.api]
-        last = market.trades.select(:tid).last
-        last = last.tid unless last.nil?
-        last += 1 unless last.nil?
-        rt = RETRIES
-        trades = []
-        begin
-          rq += 1
-          rt -= 1
-          trades = api.trades(last, market.couple)
-        rescue
-          retry if rt > 0
-        end
-        unless trades.empty?
-          Model::Trade.transaction do
-            Model::Trade.create(trades.map { |t| t[:market] = market ; t })
-          end
-          logger.info { '%d trades fetched from [%s] market of [%s] exchange and inserted to database.' % [trades.size, market.couple, market.exchange.name] }
-        end
-      end
-      delay = rq * DELAY_PER_RQ - (Time.now - start)
-      sleep delay if delay > 0
+      markets.each { |id| downloader.request_update id }
+      sleep markets.size * DELAY_PER_MARKET
     end
   end
 

@@ -7,6 +7,10 @@ class Cryptobroker::Database
     require 'active_record'
 
     ActiveRecord::Base.class_eval do
+      def self.with_connection(&block)
+        self.connection_pool.with_connection &block
+      end
+
       def self.validates_belongs(*attr_names)
         validates *(attr_names.map { |attr| :"#{attr}_id" }), presence: true
         validates_each *attr_names do |record, attr, value|
