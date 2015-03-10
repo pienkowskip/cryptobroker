@@ -2,7 +2,7 @@ require_relative 'cryptobroker/version'
 require_relative 'cryptobroker/config'
 require_relative 'cryptobroker/database'
 require_relative 'cryptobroker/downloader'
-require_relative 'cryptobroker/ohlcv'
+require_relative 'cryptobroker/chart'
 require_relative 'cryptobroker/cycles_detector/detector'
 require_relative 'cryptobroker/logging'
 
@@ -59,9 +59,5 @@ class Cryptobroker
       markets[market.couple] = Model::LightTrade.map Model::Trade.unscoped.where(market: market).order(:timestamp)
     end
     markets
-  end
-
-  def ohlcv(market_id, period, starts = nil, ends = nil)
-    OHLCV.create Model::LightTrade.map(Model::Trade.unscoped.where(market: market_id).order(:timestamp)), period, starts, ends, false
   end
 end

@@ -55,8 +55,7 @@ class Cryptobroker::Downloader
       @mutex.synchronize do
         @charts << chart
         trades = ActiveRecord::Base.with_connection do
-          query = @record.trades
-          query = query.where Cryptobroker::Model::Trade.arel_table[:timestamp].gteq(chart.beginning) unless chart.beginning.nil?
+          query = @record.trades.where Cryptobroker::Model::Trade.arel_table[:timestamp].gteq(chart.beginning)
           #TODO: try to use pluck
           Cryptobroker::Model::LightTrade.map(query)
         end
@@ -67,7 +66,7 @@ class Cryptobroker::Downloader
     private
 
     def notice(chart, trades, updated)
-      trades = trades.reject { |t| t.timestamp < chart.beginning } unless chart.beginning.nil?
+      trades = trades.reject { |t| t.timestamp < chart.beginning }
       chart.notice trades, updated
     end
   end
