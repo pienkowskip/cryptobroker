@@ -8,12 +8,14 @@ class Migrate < Cryptobroker
 
   def initialize(config = '../config.yml')
     super config
-    @migrations = Dir.glob('../db/migrate/*.rb').sort
-    @migrations.each { |m| require_relative m }
+    filename = '../db/migrate/%s.rb'
+    @migrations = Dir.glob(filename % '*').sort
     @migrations = @migrations
                       .map { |m| File.basename m, '.rb' }
                       .select { |m| m =~ /\A[0-9]{14}_.+\z/ }
-                      .map { |m| m.sub(/\A[0-9]{14}_/, '').camelize.constantize }
+                      .sort
+    @migrations.each { |m| require_relative(filename % m) }
+    @migrations.map! { |m| m.sub(/\A[0-9]{14}_/, '').camelize.constantize }
   end
 
   def up

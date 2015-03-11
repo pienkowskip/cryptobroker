@@ -7,9 +7,9 @@ class CreateInvestors < ActiveRecord::Migration
       t.timestamp :beginning, null: false
       t.integer :timeframe, null: false
       t.string :indicator_class, null: false
-      t.string :indicator_conf
+      t.text :indicator_conf
       t.string :broker_class, null: false
-      t.string :broker_conf
+      t.text :broker_conf
     end
   end
 end
