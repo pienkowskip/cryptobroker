@@ -3,12 +3,13 @@ require_relative 'cryptobroker/config'
 require_relative 'cryptobroker/database'
 require_relative 'cryptobroker/downloader'
 require_relative 'cryptobroker/chart'
+require_relative 'cryptobroker/investor'
 require_relative 'cryptobroker/cycles_detector/detector'
 require_relative 'cryptobroker/logging'
 
 class Cryptobroker
   include Logging
-  DELAY_PER_MARKET = 4
+  DELAY_PER_MARKET = 8
   RETRIES = 2
 
   def initialize(config_file = 'config.yml')
@@ -30,12 +31,25 @@ class Cryptobroker
   end
 
   def invest
-    # investors = Model::Investor.preload(market: [:exchange, :base, :quote]).enabled.load
-    @investors = Model::Investor.enabled.to_a
-    markets = @investors.map(&:market_id).uniq
-    # investors.each do |investor|
-    #   investor
-    # end
+    investors = ActiveRecord::Base.with_connection { Model::Investor.preload(market: [:exchange, :base, :quote]).enabled.to_a }
+    markets = investors.map(&:market_id).uniq
+    downloader = Downloader.new ->(name) { api name }, 5, markets
+    charts = {}
+    investors.map! do |investor|
+      key = [investor.market_id, investor.beginning, investor.timeframe]
+      charts[key] = Chart.new downloader, *key unless charts.include? key
+      investor.load_classes
+      indicator = investor.get_indicator_class.new investor.get_indicator_conf
+      broker = investor.get_broker_class.new investor, investor.get_broker_conf
+      Investor.new charts[key], indicator, broker
+    end
+    loop do
+      # markets.each { |id| downloader.request_update id }
+      sleep markets.size * DELAY_PER_MARKET
+    end
+  rescue StandardError => e
+    logger.fatal { "Uncaught exception: #{e.message} (#{e.class})" }
+    raise e
   end
 
   def trace

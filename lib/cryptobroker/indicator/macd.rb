@@ -5,9 +5,9 @@ module Cryptobroker::Indicator
   class MACD
     include HistogramBased
 
-    def initialize(brokers, price = :median, fast = 12, slow = 26, signal = 9)
-      super brokers, price
-      @macd = Macd.new fast, slow, signal
+    def initialize(conf = {price: 'median', fast: 12, slow: 26, signal: 9})
+      super conf
+      @macd = Macd.new conf[:fast], conf[:slow], conf[:signal]
     end
 
     def name

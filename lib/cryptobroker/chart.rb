@@ -65,17 +65,15 @@ class Cryptobroker::Chart
 
   attr_reader :beginning, :timeframe
 
-  def initialize(downloader, market_id, beginning, timeframe, safety_lag = 20)
+  def initialize(downloader, market_id, beginning, timeframe, safety_lag = 20, buffer_size = 4096)
     super()
-    @downloader = downloader
-    @market_id = market_id
-    @beginning = beginning
-    @timeframe = timeframe
-    @safety_lag = safety_lag
+    @downloader, @market_id, @beginning, @timeframe, @safety_lag, @buffer_size = downloader, market_id, beginning, timeframe
+    @safety_lag, @buffer_size = safety_lag, buffer_size
     @last = Bar.new @beginning, @timeframe
     synchronize do
       @indicators = []
-      @chart = []
+      @buffer = []
+      @size = 0
       @updated = nil
     end
     @queue = Queue.new
@@ -92,24 +90,21 @@ class Cryptobroker::Chart
         sleep -diff[]
       end
       loop do
-        logger.debug @timeframe - (diff[] % @timeframe) + @safety_lag
         sleep @timeframe - (diff[] % @timeframe) + @safety_lag
-        @downloader.request_update(@market_id)
+        @downloader.request_update @market_id
       end
     end
     @requester.abort_on_exception = true
   end
 
-  def get(bar_index)
-    size, updated = synchronize do
-      [@chart.size, @updated]
-    end
-    enum_for :get_until, bar_index, size, updated
+  def get(idx)
+    synchronize { [buffer_copy(idx - (@size - @buffer.size)), @size, @updated] }
   end
 
   def register_indicator(indicator)
     synchronize do
       @indicators.push indicator
+      indicator.notice @size if @size > 0
     end
   end
 
@@ -119,13 +114,20 @@ class Cryptobroker::Chart
 
   private
 
+  def buffer_copy(i)
+    raise IndexError, 'index outside of buffer bounds' if i < 0 || i > @buffer.size
+    @buffer[i, @buffer.size - i]
+  end
+
   def handle_notice(trades, updated)
-    news = []
+    new_buffer, new_size = synchronize { [buffer_copy(0), @size] }
     finish = ->(timestamp) do
       while timestamp >= @last.end
         unless @last.empty?
           @last.send :finish
-          news.push @last
+          new_buffer.shift if new_buffer.size >= @buffer_size
+          new_buffer.push @last
+          new_size += 1
         end
         @last = Bar.new @last.end, @timeframe
       end
@@ -137,18 +139,14 @@ class Cryptobroker::Chart
     end
     finish[updated - @safety_lag]
     synchronize do
-      @chart.concat news
+      new_bars = new_size - @size
       @updated = updated
-      @indicators.each { |indicator| indicator.notice @updated }
+      if new_bars > 0
+        @size = new_size
+        @buffer = new_buffer
+        logger.debug { 'Chart for market with id [%d] started at [%s] with timeframe [%d] developed [%d] new bars of [%d] all bars.' % [@market_id, @beginning, @timeframe, new_bars, @size] }
+        @indicators.each { |indicator| indicator.notice @size }
+      end
     end
   end
-
-  def get_until(idx, size, updated)
-    while idx < size do
-      yield @chart[idx]
-      idx += 1
-    end
-    updated
-  end
-
 end

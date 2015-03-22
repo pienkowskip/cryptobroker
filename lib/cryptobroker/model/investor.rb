@@ -21,7 +21,13 @@ module Cryptobroker::Model
       define_method :"get_#{attr}_conf" do
         conf = send(:"#{attr}_conf")
         return nil if conf.nil?
-        JSON.parse conf
+        JSON.parse(conf).deep_symbolize_keys
+      end
+    end
+
+    def load_classes
+      [:indicator, :broker].each do |attr|
+        require send(:"#{attr}_class").underscore
       end
     end
 

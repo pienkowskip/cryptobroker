@@ -7,24 +7,27 @@ require 'cryptobroker/downloader'
 require 'cryptobroker/chart'
 
 app = Cryptobroker.new('../config.yml')
+app.invest
 
-ids = Cryptobroker::Model::Market.where(traced: true).pluck(:id)
-downloader = Cryptobroker::Downloader.new ->(name) { app.api name }, 2, ids
-chart =  Cryptobroker::Chart.new downloader, 1, Time.now - 10075, 1*60, 10
-class Ind
-  def initialize(ch)
-    @ch = ch
-    @ch.register_indicator self
-  end
-
-  def notice(up)
-    puts Thread.current.object_id
-    puts up
-    puts @ch.get(0).count
-  end
-end
-Ind.new(chart)
-loop do
-  ids.each { |i| downloader.request_update i }
-  sleep 10
-end
+# ids = Cryptobroker::Model::Market.where(traced: true).pluck(:id)
+# downloader = Cryptobroker::Downloader.new ->(name) { app.api name }, 2, ids
+# chart =  Cryptobroker::Chart.new downloader, 1, Time.now - 10075, 1*30, 10
+# class Ind
+#   def initialize(ch)
+#     @ch = ch
+#     @ch.register_indicator self
+#   end
+#
+#   def notice(up)
+#     puts Thread.current.object_id
+#     puts up
+#     e,sz,up = @ch.get(0)
+#     puts e.map(&:end).inspect
+#     puts e.count
+#   end
+# end
+# Ind.new(chart)
+# loop do
+#   ids.each { |i| downloader.request_update i }
+#   sleep 100
+# end

@@ -4,10 +4,10 @@ module Cryptobroker::Indicator
   class MACDOnDEMA
     include HistogramBased
 
-    def initialize(brokers, price = :median, fast = 12, slow = 26, signal = 9, dema = 8)
-      super brokers, price
-      @macd = Macd.new fast, slow, signal
-      @dema = Dema.new dema
+    def initialize(conf = {price: 'median', fast: 12, slow: 26, signal: 9, dema: 8})
+      super conf
+      @macd = Macd.new conf[:fast], conf[:slow], conf[:signal]
+      @dema = Dema.new conf[:dema]
     end
 
     def name

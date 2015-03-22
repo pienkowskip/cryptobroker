@@ -3,18 +3,29 @@ require_relative 'base'
 module Cryptobroker::Indicator
   class Random
     include Base
-    TRANSACTIONS = 0.12
+    def initialize(conf = {factor: 0.12})
+      super conf
+      @factor = conf[:factor]
+    end
+
+    def reset
+      super
+      @last = :sell
+    end
+
+    def append(bars, &block)
+      bars.each do |bar|
+        if rand < @factor
+          @last = @last == :buy ? :sell : :buy
+          signal @last, bar, @finished, &block
+        end
+        finish
+      end
+      update_startup 0
+    end
 
     def name
       'Random'
-    end
-
-    def run(chart)
-      @startup = 0
-      transactions = chart.zip(chart.size.times).shuffle.slice(0, (chart.size * TRANSACTIONS).to_i).sort_by { |i,_| i.start }
-      transactions.each_with_index do |v,mod|
-          signal mod % 2 == 0 ? :buy : :sell, v[0].start, v[1]
-      end
     end
   end
 end

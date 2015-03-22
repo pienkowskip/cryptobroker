@@ -5,18 +5,32 @@ module Cryptobroker::Indicator
     include ::Indicator
     include ::Indicator::AutoGen
 
-    attr_reader :startup
+    attr_reader :startup, :finished
 
-    def initialize(brokers, price = :median)
-      @brokers = brokers
-      @price = price
+    def initialize(conf = {price: 'median'})
+      @price = conf.fetch :price, 'median'
+      @price = @price.to_sym rescue @price
+      reset
     end
 
     def name
       'Base'
     end
 
+    def reset
+      @finished = 0
+      @startup = nil
+    end
+
     protected
+
+    def finish
+      @finished += 1
+    end
+
+    def signal(type, bar, i)
+      yield type, bar.end, {idx: i, price: bar.send(@price)}
+    end
 
     def price(chart)
       chart.map { |i| i.send @price }
@@ -28,8 +42,8 @@ module Cryptobroker::Indicator
       array.rotate! ri + 1
     end
 
-    def signal(type, timestamp, idx)
-      @brokers.each { |broker| broker.send type, timestamp, {idx: idx} }
+    def update_startup(startup)
+      @startup = startup unless startup.nil?
     end
   end
 end

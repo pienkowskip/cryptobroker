@@ -5,10 +5,10 @@ module Cryptobroker::Indicator
   class DEMA
     include HistogramBased
 
-    def initialize(brokers, price = :median, short = 21, long = 55)
-      super brokers, price
-      @short_dema = Dema.new short
-      @long_dema = Dema.new long
+    def initialize(conf = {price: 'median', short: 21, long: 55})
+      super conf
+      @short_dema = Dema.new conf[:short]
+      @long_dema = Dema.new conf[:long]
     end
 
     def name
