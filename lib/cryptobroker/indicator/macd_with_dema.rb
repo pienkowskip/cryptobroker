@@ -21,7 +21,9 @@ module Cryptobroker::Indicator
       fast = shift_nils @fast.run price
       slow = shift_nils @slow.run price
       macd = fast.zip(slow).map { |f,s| f.nil? || s.nil? ? nil : f - s }
-      signal = @signal.run macd.drop(macd.index { |i| !i.nil? })
+      idx = macd.index { |i| !i.nil? }
+      signal = []
+      signal = @signal.run(macd.drop(idx)) unless idx.nil?
       signal = shift_nils signal.fill(nil, signal.size, price.size - signal.size)
       macd.zip(signal).map { |m,s| m.nil? || s.nil? ? nil : m - s }
     end

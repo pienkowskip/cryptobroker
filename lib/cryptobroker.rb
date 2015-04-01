@@ -41,12 +41,10 @@ class Cryptobroker
       investor.load_classes
       indicator = investor.get_indicator_class.new investor.get_indicator_conf
       broker = investor.get_broker_class.new investor, investor.get_broker_conf
-      Investor.new charts[key], indicator, broker
+      Investor.new charts[key], indicator, broker, investor.name
     end
-    loop do
-      # markets.each { |id| downloader.request_update id }
-      sleep markets.size * DELAY_PER_MARKET
-    end
+    sleep 10
+    markets.each { |id| downloader.request_update id }
   rescue StandardError => e
     logger.fatal { "Uncaught exception: #{e.message} (#{e.class})" }
     raise e

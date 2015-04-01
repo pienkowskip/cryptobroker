@@ -17,8 +17,12 @@ module Cryptobroker::Indicator
     def histogram(chart)
       price = price chart
       price = @dema.run price
-      price.pop(price.size - price.rindex { |i| !i.nil? } - 1)
-      hist = @macd.run(price)[:out_macd_hist]
+      ridx = price.rindex { |i| !i.nil? }
+      hist = []
+      unless ridx.nil?
+        price.pop(price.size - ridx - 1)
+        hist = @macd.run(price)[:out_macd_hist]
+      end
       hist.fill(nil, hist.size, chart.size - hist.size)
       shift_nils hist
     end

@@ -4,9 +4,9 @@ require_relative 'logging'
 class Cryptobroker::Investor
   include Cryptobroker::Logging
 
-  def initialize(chart, indicator, broker)
-    @chart, @indicator, @broker = chart, indicator, broker
-    @last_signal = Time.now - 60*60*48
+  def initialize(chart, indicator, broker, name)
+    @chart, @indicator, @broker, @name = chart, indicator, broker, name
+    @last_signal = Time.now
     @queue = Queue.new
     @chart.register_indicator self
     @handler = Thread.new do
@@ -25,16 +25,13 @@ class Cryptobroker::Investor
 
   def handle_notice(size)
     return unless size > @indicator.finished
-    bars, size, updated = @chart.get @indicator.finished
+    bars = @chart.get(@indicator.finished)[0]
     return if bars.empty?
-    logger.debug { 'Notice - buffered bars: [%d], size: [%d], updated at: [%s]' % [bars.size, size, updated.to_s] }
-    sigs = 0
     @indicator.append(bars) do |type, timestamp, params|
       next if @last_signal >= timestamp
-      sigs += 1
+      logger.info { 'Indicator [%s] of investor [%s] raised [%s] signal.' % [@indicator.name, @name, type] }
       @broker.send type, timestamp, params
       @last_signal = timestamp
     end
-    logger.info { 'Indicator [%s] stats: new sigs [%d], base [%.3f], quote [%.3f]' % [@indicator.name, sigs, *@broker.pay_out] }
   end
 end

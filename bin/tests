@@ -8,6 +8,7 @@ require 'cryptobroker/chart'
 
 app = Cryptobroker.new('../config.yml')
 app.invest
+loop { sleep 60 }
 
 # ids = Cryptobroker::Model::Market.where(traced: true).pluck(:id)
 # downloader = Cryptobroker::Downloader.new ->(name) { app.api name }, 2, ids

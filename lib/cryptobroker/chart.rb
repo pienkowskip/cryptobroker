@@ -144,7 +144,7 @@ class Cryptobroker::Chart
       if new_bars > 0
         @size = new_size
         @buffer = new_buffer
-        logger.debug { 'Chart for market with id [%d] started at [%s] with timeframe [%d] developed [%d] new bars of [%d] all bars.' % [@market_id, @beginning, @timeframe, new_bars, @size] }
+        logger.debug { 'Chart (market id: [%d], timeframe: [%d], started: [%s]) developed [%d] new bars of [%d] all bars.' % [@market_id, @timeframe, @beginning, new_bars, @size] }
         @indicators.each { |indicator| indicator.notice @size }
       end
     end

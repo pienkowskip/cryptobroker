@@ -12,7 +12,7 @@ module Cryptobroker::Indicator
     end
 
     def name
-      'filtered ' + super
+      "filtered(#{@filter_len}) " + super
     end
 
     def reset
