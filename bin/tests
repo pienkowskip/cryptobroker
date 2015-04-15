@@ -10,25 +10,38 @@ app = Cryptobroker.new('../config.yml')
 app.invest
 loop { sleep 60 }
 
-# ids = Cryptobroker::Model::Market.where(traced: true).pluck(:id)
-# downloader = Cryptobroker::Downloader.new ->(name) { app.api name }, 2, ids
-# chart =  Cryptobroker::Chart.new downloader, 1, Time.now - 10075, 1*30, 10
-# class Ind
-#   def initialize(ch)
-#     @ch = ch
-#     @ch.register_indicator self
-#   end
-#
-#   def notice(up)
-#     puts Thread.current.object_id
-#     puts up
-#     e,sz,up = @ch.get(0)
-#     puts e.map(&:end).inspect
-#     puts e.count
-#   end
-# end
-# Ind.new(chart)
+# api = app.api 'cexio'
+# couple = 'BTC/USD'
+# durations = []
 # loop do
-#   ids.each { |i| downloader.request_update i }
-#   sleep 100
+#   price = api.ticker(couple)[:ask]*1.2
+#   timer = Cryptobroker::Logging::Timer.new
+#   timer.start
+#   order = api.place_sell_order(couple, price, 0.02)
+#   puts JSON.pretty_generate(order)
+#   puts api.cancel_order(order[:id])
+#   loop do
+#     begin
+#       arch = api.archived_orders(couple, order[:timestamp].to_f - 1.0, order[:timestamp].to_f + 1.0)
+#     rescue
+#       retry
+#     end
+#     ts = order[:timestamp].to_i
+#     arch_ord = nil
+#     arch.each { |o|
+#       if Time.parse(o['time']).to_i == ts
+#         arch_ord = o
+#         break
+#       end
+#     }
+#     unless arch_ord.nil?
+#       timer.finish
+#       durations << timer.duration
+#       puts JSON.pretty_generate(arch_ord)
+#       break
+#     end
+#     sleep 5
+#   end
+#   app.logger.info timer.enhance('Waiting for archive')
+#   # app.logger.info 'Mean duration of waiting for archive: [%f]' % (durations.reduce(:+) / durations.size.to_f)
 # end

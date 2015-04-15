@@ -1,3 +1,6 @@
+require 'bigdecimal'
+require 'bigdecimal/util'
+
 module Cryptobroker::Statistics
   def middle(ar)
     ar.size % 2 == 1 ? ar[ar.size/2] : (ar[ar.size/2 - 1] + ar[ar.size/2]) / 2.0

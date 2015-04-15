@@ -6,7 +6,7 @@ class Cryptobroker::Downloader
   class Market
     include Cryptobroker::Logging
 
-    RETRIES = 2
+    ATTEMPTS = 2
 
     def initialize(record, api)
       @record = record
@@ -23,14 +23,18 @@ class Cryptobroker::Downloader
         trade = @record.trades.tid_ordered.select(:tid).last
         trade.nil? ? nil : trade.tid + 1
       end
-      rt = RETRIES
+      attempts = ATTEMPTS
       trades = nil
       begin
-        rt -= 1
+        attempts -= 1
         timestamp = Time.now
-        trades = @api.trades(last, @record.couple)
-      rescue
-        retry if rt > 0
+        trades = @api.trades @record.couple, last
+      rescue StandardError => error
+        retry if attempts > 0
+        logger.error { ActiveRecord::Base.with_connection {
+          'Fetching trades from [%s] market of [%s] exchange ended in failure after %d attempts. Exception: %s (%s).' %
+              [@record.couple, @record.exchange.name, ATTEMPTS, error.message, error.class]
+        }}
       end
       if trades.nil?
         @mutex.unlock
@@ -59,7 +63,7 @@ class Cryptobroker::Downloader
           #TODO: try to use pluck
           Cryptobroker::Model::LightTrade.map(query)
         end
-        notice chart, trades, trades.last.timestamp - 1 unless trades.empty?
+        notice chart, trades, trades.last.timestamp - 0.1 unless trades.empty?
       end
     end
 

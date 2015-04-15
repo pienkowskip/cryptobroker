@@ -1,3 +1,6 @@
+require 'bigdecimal'
+require 'bigdecimal/util'
+
 module Cryptobroker::CyclesDetector
   class MarketOrders
     class Order

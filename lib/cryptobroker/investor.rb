@@ -29,7 +29,7 @@ class Cryptobroker::Investor
     return if bars.empty?
     @indicator.append(bars) do |type, timestamp, params|
       next if @last_signal >= timestamp
-      logger.info { 'Indicator [%s] of investor [%s] raised [%s] signal.' % [@indicator.name, @name, type] }
+      logger.info { 'Indicator [%s] of investor [%s] raised [%s] signal generated at [%s].' % [@indicator.name, @name, type, timestamp] }
       @broker.send type, timestamp, params
       @last_signal = timestamp
     end

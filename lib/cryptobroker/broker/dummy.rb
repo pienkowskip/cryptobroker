@@ -17,7 +17,7 @@ module Cryptobroker::Broker
       end
     end
 
-    def initialize(investor, conf)
+    def initialize(conf, api, investor)
       @balance = Balance.new(100, 0)
     end
 

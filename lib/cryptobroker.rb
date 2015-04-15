@@ -40,7 +40,7 @@ class Cryptobroker
       charts[key] = Chart.new downloader, *key unless charts.include? key
       investor.load_classes
       indicator = investor.get_indicator_class.new investor.get_indicator_conf
-      broker = investor.get_broker_class.new investor, investor.get_broker_conf
+      broker = investor.get_broker_class.new investor.get_broker_conf, api(investor.market.exchange.api), investor
       Investor.new charts[key], indicator, broker, investor.name
     end
     sleep 10
