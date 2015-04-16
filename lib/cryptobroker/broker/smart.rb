@@ -7,7 +7,7 @@ module Cryptobroker::Broker
     include MonitorMixin
     include Cryptobroker::Logging
 
-    MORE_SIGNALS_LAG = 0.3
+    CONCURRENCY_LAG = 0.3
     DEFAULT_SIGNAL_PRICE_PERIOD = 0.5
 
 
@@ -21,11 +21,12 @@ module Cryptobroker::Broker
       synchronize do
         @trader = nil
         @order = nil
+        @balance_changes = []
       end
       @manager = Thread.new do
         loop do
           signal = @signals.pop
-          sleep MORE_SIGNALS_LAG
+          sleep CONCURRENCY_LAG
           begin
             loop { signal = @signals.pop true }
           rescue ThreadError
@@ -50,7 +51,11 @@ module Cryptobroker::Broker
           @trader.terminate
           @trader = nil
         end
-        cancel_order
+        begin
+          cancel_order
+        rescue
+          retry #TODO: setup decent lag?
+        end
       end
     end
 
@@ -60,30 +65,51 @@ module Cryptobroker::Broker
       cancel
       synchronize do
         @trader = Thread.new do
-          if signal_price_trading type, timestamp, price
-            synchronize { @trader = nil }
-          else
-            # active_trading
+          unless signal_price_trading type, timestamp, price
+            active_trading type
           end
+          synchronize { @trader = nil }
         end
         @trader.abort_on_exception = true
       end
       logger.debug { 'Broker of investor [%s] scheduled for execution [%s] order.' % [@investor.name, type] }
     end
 
+    def balance
+      synchronize do
+        db_balance = ActiveRecord::Base.with_connection { @investor.balances.last }
+        base, quote = db_balance.base, db_balance.quote
+        @balance_changes.each do |change|
+          base += change[1]
+          quote += change[2]
+        end
+        return base, quote
+      end
+    end
+
     def place_order(type, price)
       logger.debug 'inv [%s] placing [%s] order with price [%f]' % [@investor.name, type, price]
-      #1. read amount for order
-      #2. place order and setup @order
+      synchronize do
+        cancel_order
+        amount = balance[type == :buy ? 1 : 0]
+        @order = @api.send :"place_#{type}_order", @couple, price, amount
+        # setup balance change? or at cancel?
+      end
     end
 
     def cancel_order
-      #1. Read from open orders and check if exists.
-      #2. Try to cancel order.
-      #3. Setup order for confirmation.
-      # what to do on timeout? - I recommend to retry canceling endlessly.
       synchronize do
         return true if @order.nil?
+        order = @api.open_orders(@couple).find { |o| o[:id] == @order[:id] }
+        cancelled = @api.cancel_order @order[:id]
+        if cancelled
+          # assume that order was fully executed
+        else
+          # order partially (or no) executed - use order var
+        end
+        # setup new balance & order for confirmation
+        @order = nil
+        cancelled
       end
     end
 
@@ -91,10 +117,16 @@ module Cryptobroker::Broker
       diff = ->() { @signal_price_period - (Time.now - timestamp) }
       return false if diff[] <= 0 || price.nil?
       place_order type, send(:"#{type}_signal_price", price)
+      #if order is finished you can cancel immediately
       duration = diff[]
       sleep duration if duration > 0
-      cancel_order
-      return false
+      cancelled = begin
+        cancel_order
+      rescue
+        sleep CONCURRENCY_LAG
+        retry
+      end
+      !cancelled
     end
 
     def sell_signal_price(price)
@@ -107,11 +139,15 @@ module Cryptobroker::Broker
       price > tck[:ask] ? tck[:ask] : price
     end
 
-    def sell_active_price(ticker)
+    def active_trading(type)
+      false
+    end
+
+    def sell_active_price()
 
     end
 
-    def buy_active_price(ticker)
+    def buy_active_price()
 
     end
   end

@@ -69,7 +69,7 @@ module Cryptobroker::API
     end
 
     def place_order(couple, type, price, amount)
-      order api_call('place_order', {type: type, price: price.to_s, amount: amount.to_s}, true, couple)
+      order api_call('place_order', {type: type, price: price.to_s, amount: amount.to_s}, true, couple), couple
     end
 
     def place_buy_order(couple, price, amount_in)
@@ -83,7 +83,7 @@ module Cryptobroker::API
     end
 
     def place_sell_order(couple, price, amount_in)
-      _, price_str = norm_price price
+      prc, price_str = norm_price price
       base_prec = precision(couple.split('/')[0])
       place_order couple, :sell, price_str, big_decimal(amount_in).truncate(base_prec).to_s
     end
@@ -101,7 +101,7 @@ module Cryptobroker::API
     end
 
     def open_orders(couple)
-      api_call('open_orders', {}, true, couple).map &method(:order)
+      api_call('open_orders', {}, true, couple).map { |ord| order ord, couple }
     end
 
     def archived_orders(couple, since = nil, till = nil, limit = 100)
@@ -109,7 +109,42 @@ module Cryptobroker::API
       params[:dateFrom] = since unless since.nil?
       params[:dateTo] = till unless till.nil?
       params[:limit] = limit unless limit.nil?
-      api_call 'archived_orders', params, true, couple
+      api_call('archived_orders', params, true, couple).map do |raw_order|
+        order = map_hash raw_order, id: 'orderId', type: 'type', quote_currency: 'symbol2',
+                         price: 'price', base_amount: 'amount', base_remained: 'remains', timestamp: 'time', status: 'status'
+        qc = order.delete :quote_currency
+        order[:quote_amount] = raw_order.fetch "ta:#{qc}", 0
+        order[:quote_fee] = raw_order.fetch "fa:#{qc}", 0
+        raw_order.each {|k,v| order[k] = big_decimal(v) if k.ends_with? ':cds'}
+        md = /\A([0-9]+)\.([0-9]+)\z/.match order[:base_amount]
+        raise ArgumentError, 'invalid amount' unless md
+        order[:base_remained] = order[:base_remained]
+                                    .to_s.rjust(md[1].length + md[2].length, '0')
+                                    .insert(md[1].length, '.')
+        bd = method :big_decimal
+        order = convert_hash order,
+                             id: method(:Integer),
+                             type: method(:order_type),
+                             timestamp: ->(ts) { Time.parse(ts) },
+                             status: ->(status) do
+                               if status == 'd'
+                                 :completed
+                               elsif status == 'c'
+                                 :cancelled
+                               else
+                                 raise ArgumentError, 'invalid status'
+                               end
+                             end,
+                             price: bd, base_amount: bd, base_remained: bd, quote_amount: bd, quote_fee: bd
+        order[:base_change] = order[:base_amount] - order[:base_remained]
+        order[:quote_change] = -order[:quote_amount]
+        if order[:type] == :sell
+          order[:base_change] *= -1
+          order[:quote_change] *= -1
+        end
+        order[:quote_change] -= order[:quote_fee]
+        order
+      end
     end
 
     private
@@ -181,12 +216,31 @@ module Cryptobroker::API
       Time.at Float(ts)
     end
 
-    def order(order)
+    def order_type(type)
+      type = type.to_sym
+      raise ArgumentError, 'invalid order type' unless [:buy, :sell].include? type
+      type
+    end
+
+    def order(order, couple)
       order = map_hash order, timestamp: 'time', id: 'id', type: 'type', price: 'price', base_amount: 'amount', base_pending: 'pending'
-      convert_hash order,
+      bd = method :big_decimal
+      order = convert_hash order,
                    timestamp: ->(ts) { Time.at(Float(ts) / 1000.0) },
                    id: method(:Integer),
-                   price: method(:big_decimal), base_amount: method(:big_decimal), base_pending: method(:big_decimal)
+                   type: method(:order_type),
+                   price: bd, base_amount: bd, base_pending: bd
+      order[:base_completed] = order[:base_amount] - order[:base_pending]
+      quote_prec = precision(couple.split('/')[1])
+      [:amount, :completed].each do |sym|
+        quote = order[:"base_#{sym}"] * order[:price]
+        order[:"quote_#{sym}"] = if order[:type] == :buy
+          quote.ceil(quote_prec) + (quote * TRANSACTION_FEE).ceil(quote_prec)
+        else
+          quote.floor(quote_prec) - (quote * TRANSACTION_FEE).ceil(quote_prec)
+        end
+      end
+      order
     end
 
     def parse_json_answer(answer)
