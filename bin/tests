@@ -13,9 +13,10 @@ app = Cryptobroker.new('../config.yml')
 api = app.api 'cexio'
 couple = 'BTC/USD'
 tck = api.ticker couple
-puts JSON.pretty_generate(api.place_buy_order couple, tck[:bid]*0.9, '3.13')
-puts JSON.pretty_generate(api.place_sell_order couple, tck[:ask]*1.1, '0.0113')
-puts JSON.pretty_generate(api.open_orders couple)
+puts JSON.pretty_generate(api.place_buy_order(couple, tck.bid*0.93, '3.13').as_json)
+puts JSON.pretty_generate(api.place_sell_order(couple, tck.ask*1.07, '0.0113').as_json)
+puts JSON.pretty_generate(api.open_orders(couple).as_json)
+puts JSON.pretty_generate(api.archived_orders(couple).reject {|o| o.quote_change == 0}.as_json)
 
 # api = app.api 'cexio'
 # couple = 'BTC/USD'

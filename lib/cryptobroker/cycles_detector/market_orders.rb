@@ -31,14 +31,14 @@ module Cryptobroker::CyclesDetector
       rt = 2
       begin
         rt -= 1
-        orders = @api.orders @market.couple
+        orders = @api.order_book @market.couple
       rescue => e
         retry if rt > 0
         raise e
       end
-      @timestamp = orders[:timestamp]
-      @asks = orders[:asks].map { |price, amount| Order.new price, amount }
-      @bids = orders[:bids].map { |price, amount| Order.new price, amount }
+      @timestamp = orders.timestamp
+      @asks = orders.asks.map { |price, amount| Order.new price, amount }
+      @bids = orders.bids.map { |price, amount| Order.new price, amount }
     end
 
     def instant_fake_buy(quote)

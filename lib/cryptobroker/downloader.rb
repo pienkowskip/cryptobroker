@@ -43,7 +43,12 @@ class Cryptobroker::Downloader
       unless trades.empty?
         ActiveRecord::Base.with_connection do
           Cryptobroker::Model::Trade.transaction do
-            trades = Cryptobroker::Model::Trade.create!(trades.map { |t| t[:market] = @record ; t })
+            trades.map! do |trade|
+              trade = trade.to_hash
+              trade[:market] = @record
+              trade
+            end
+            trades = Cryptobroker::Model::Trade.create! trades
           end
           trades = Cryptobroker::Model::LightTrade.map(trades)
           logger.info { '%d trades fetched from [%s] market of [%s] exchange and inserted to database.' % [trades.size, @record.couple, @record.exchange.name] }

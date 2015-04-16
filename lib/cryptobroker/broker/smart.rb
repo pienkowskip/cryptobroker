@@ -89,6 +89,7 @@ module Cryptobroker::Broker
 
     def place_order(type, price)
       logger.debug 'inv [%s] placing [%s] order with price [%f]' % [@investor.name, type, price]
+      raise NotImplementedError
       synchronize do
         cancel_order
         amount = balance[type == :buy ? 1 : 0]
@@ -100,8 +101,8 @@ module Cryptobroker::Broker
     def cancel_order
       synchronize do
         return true if @order.nil?
-        order = @api.open_orders(@couple).find { |o| o[:id] == @order[:id] }
-        cancelled = @api.cancel_order @order[:id]
+        order = @api.open_orders(@couple).find { |o| o.id == @order.id }
+        cancelled = @api.cancel_order @order.id
         if cancelled
           # assume that order was fully executed
         else
@@ -131,12 +132,12 @@ module Cryptobroker::Broker
 
     def sell_signal_price(price)
       tck = @api.ticker @couple
-      price < tck[:bid] ? tck[:bid] : price
+      price < tck.bid ? tck.bid : price
     end
 
     def buy_signal_price(price)
       tck = @api.ticker @couple
-      price > tck[:ask] ? tck[:ask] : price
+      price > tck.ask ? tck.ask : price
     end
 
     def active_trading(type)
