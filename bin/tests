@@ -7,16 +7,8 @@ require 'cryptobroker/downloader'
 require 'cryptobroker/chart'
 
 app = Cryptobroker.new('../config.yml')
-# app.invest
-# loop { sleep 60 }
-
-api = app.api 'cexio'
-couple = 'BTC/USD'
-tck = api.ticker couple
-puts JSON.pretty_generate(api.place_buy_order(couple, tck.bid*0.93, '3.13').as_json)
-puts JSON.pretty_generate(api.place_sell_order(couple, tck.ask*1.07, '0.0113').as_json)
-puts JSON.pretty_generate(api.open_orders(couple).as_json)
-puts JSON.pretty_generate(api.archived_orders(couple).reject {|o| o.quote_change == 0}.as_json)
+app.invest
+loop { sleep 60 }
 
 # api = app.api 'cexio'
 # couple = 'BTC/USD'

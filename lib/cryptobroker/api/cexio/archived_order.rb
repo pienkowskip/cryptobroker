@@ -24,6 +24,8 @@ class Cryptobroker::API::Cexio::ArchivedOrder < Cryptobroker::API::Cexio::Entity
                   end,
                   price: :big_decimal, base_amount: :big_decimal, base_remained: :big_decimal,
                   quote_amount: :big_decimal, quote_fee: :big_decimal
+  rescue
+    raise Cryptobroker::API::Cexio::ResponseError
   end
 
   def base_change

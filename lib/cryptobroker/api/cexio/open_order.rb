@@ -8,6 +8,8 @@ class Cryptobroker::API::Cexio::OpenOrder < Cryptobroker::API::Cexio::Entity
     convert_attrs timestamp: ->(ts) { Time.at(Float(ts) / 1000.0) }, id: :Integer, type: :order_type,
                   price: :big_decimal, base_amount: :big_decimal, base_pending: :big_decimal
     @quote_prec = precision split_couple(couple)[1]
+  rescue
+    raise Cryptobroker::API::Cexio::ResponseError
   end
 
   def base_completed

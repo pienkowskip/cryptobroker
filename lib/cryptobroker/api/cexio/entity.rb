@@ -1,4 +1,5 @@
 require_relative 'converter'
+require_relative 'error'
 
 module Cryptobroker::API
   class Cexio

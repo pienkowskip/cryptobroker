@@ -3,6 +3,7 @@ require 'uri'
 require 'json'
 require 'net/http/persistent'
 require_relative '../logging'
+require_relative 'cexio/error'
 require_relative 'cexio/converter'
 require_relative 'cexio/trade'
 require_relative 'cexio/ticker'
@@ -12,7 +13,6 @@ require_relative 'cexio/archived_order'
 
 module Cryptobroker::API
   class Cexio
-    class Error < Exception; end
     include Cryptobroker::Logging
     include Converter
 
@@ -32,9 +32,7 @@ module Cryptobroker::API
 
     def trades(couple, since = nil)
       param = since.nil? ? {} : {since: since.to_s}
-      trades = api_call 'trade_history', param, false, couple
-      trades.map! &Trade.method(:new)
-      trades.reverse
+      api_call('trade_history', param, false, couple).map(&Trade.method(:new)).reverse
     end
 
     def ticker(couple)
@@ -72,9 +70,9 @@ module Cryptobroker::API
         parse_json_answer answer
       end
       api_call 'cancel_order', {id: id.to_s}, true, '', boolean_parser
-    rescue Error => e
-      return false if e.message == 'Error: Order not found'
-      raise e
+    rescue LogicError => err
+      return false if err.message == 'Error: Order not found'
+      raise
     end
 
     def open_orders(couple)
@@ -125,28 +123,25 @@ module Cryptobroker::API
       url = URI url
       post = Net::HTTP::Post.new url.path
       post.set_form_data param
-      res = @http_client.request url, post
-      res.value
+      begin
+        res = @http_client.request url, post
+        res.value
+      rescue Net::HTTPExceptions => err
+        err = err.response
+        raise err.is_a?(Net::HTTPServerError) ? ServerError : RequestError, "HTTP error: #{err.code} #{err.message}"
+      rescue
+        raise ConnectivityError, 'unable to connect API'
+      end
       res.body
     end
 
-    def map_hash(hash, mapper)
-      new_hash = {}
-      mapper.each do |to, from|
-        raise Error, 'invalid data received from request' unless hash.include? from
-        new_hash[to] = hash[from]
-      end
-      new_hash
-    end
-
-    def convert_hash(hash, converters)
-      converters.each { |key, converter| hash[key] = converter.call hash[key] }
-      hash
-    end
-
     def parse_json_answer(answer)
-      answer = JSON.parse(answer)
-      raise Error, answer['error'] if answer.include? 'error'
+      begin
+        answer = JSON.parse(answer)
+      rescue
+        raise ResponseError, 'parsing response JSON failure'
+      end
+      raise LogicError, answer['error'] if answer.include? 'error'
       answer
     end
 
