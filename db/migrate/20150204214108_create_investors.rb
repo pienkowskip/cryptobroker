@@ -11,5 +11,6 @@ class CreateInvestors < ActiveRecord::Migration
       t.string :broker_class, null: false
       t.text :broker_conf
     end
+    add_index :investors, [:name, :market_id], unique: true
   end
 end

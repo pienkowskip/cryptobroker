@@ -5,5 +5,6 @@ class CreateCurrencies < ActiveRecord::Migration
       t.string :name, null: false
       t.boolean :crypto, null: false
     end
+    add_index :currencies, :name, unique: true
   end
 end

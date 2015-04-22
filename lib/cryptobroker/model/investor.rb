@@ -2,6 +2,7 @@ module Cryptobroker::Model
   class Investor < ActiveRecord::Base
     belongs_to :market
     has_many :balances, inverse_of: :investor, dependent: :destroy
+    has_many :variables, inverse_of: :investor, dependent: :destroy
 
     scope :enabled, -> { where(enabled: true) }
 

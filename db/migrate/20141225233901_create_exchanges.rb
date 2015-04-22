@@ -4,5 +4,6 @@ class CreateExchanges < ActiveRecord::Migration
       t.string :name, null: false
       t.string :api, null: false
     end
+    add_index :exchanges, :name, unique: true
   end
 end
