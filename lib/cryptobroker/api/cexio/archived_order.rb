@@ -28,9 +28,12 @@ class Cryptobroker::API::Cexio::ArchivedOrder < Cryptobroker::API::Cexio::Entity
     raise Cryptobroker::API::Cexio::ResponseError
   end
 
+  def base_completed
+    base_amount - base_remained
+  end
+
   def base_change
-    ch = base_amount - base_remained
-    type == :sell ? -ch : ch
+    type == :sell ? -base_completed : base_completed
   end
 
   def quote_change

@@ -21,7 +21,7 @@ class Cryptobroker::API::Cexio::OpenOrder < Cryptobroker::API::Cexio::Entity
   end
 
   def completed?
-    base_completed <= 0
+    base_pending <= 0
   end
 
   private

@@ -16,6 +16,11 @@ module Cryptobroker::API
     include Cryptobroker::Logging
     include Converter
 
+    API_URL = 'https://cex.io/api'
+    TIMEOUT = 5
+    TRANSACTION_FEE = '0.002'.to_d
+    PRICE_DIGITS = 9
+
     def initialize(auth)
       @username = auth[:username]
       @api_key = auth[:api_key]
@@ -31,7 +36,7 @@ module Cryptobroker::API
     end
 
     def trades(couple, since = nil)
-      param = since.nil? ? {} : {since: since.to_s}
+      param = since.nil? ? {} : {since: Integer(since).to_s}
       api_call('trade_history', param, false, couple).map(&Trade.method(:new)).reverse
     end
 
@@ -41,10 +46,6 @@ module Cryptobroker::API
 
     def balance
       api_call 'balance', {}, true
-    end
-
-    def place_order(couple, type, price, amount)
-      OpenOrder.new api_call('place_order', {type: type, price: price.to_s, amount: amount.to_s}, true, couple), couple
     end
 
     def place_buy_order(couple, price, amount_in)
@@ -81,18 +82,17 @@ module Cryptobroker::API
 
     def archived_orders(couple, since = nil, till = nil, limit = 100)
       params = {}
-      params[:dateFrom] = since unless since.nil?
-      params[:dateTo] = till unless till.nil?
-      params[:limit] = limit unless limit.nil?
+      params[:dateFrom] = Time.at(since).to_f.to_s unless since.nil?
+      params[:dateTo] = Time.at(till).to_f.to_s unless till.nil?
+      params[:limit] = Integer(limit).to_s unless limit.nil?
       api_call('archived_orders', params, true, couple).map &ArchivedOrder.method(:new)
     end
 
     private
 
-    API_URL = 'https://cex.io/api'
-    TIMEOUT = 5
-    TRANSACTION_FEE = '0.002'.to_d
-    PRICE_DIGITS = 9
+    def place_order(couple, type, price, amount)
+      OpenOrder.new api_call('place_order', {type: type.to_s, price: price.to_s, amount: amount.to_s}, true, couple), couple
+    end
 
     def api_call(method, param = {}, priv = false, action = '', parser = nil)
       url = "#{API_URL}/#{method}/#{action}"

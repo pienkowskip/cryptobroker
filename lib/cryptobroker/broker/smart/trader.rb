@@ -1,6 +1,7 @@
 require 'monitor'
 require_relative '../../logging'
 require_relative '../../api/error'
+require_relative 'confirmator'
 
 module Cryptobroker::Broker
   class Smart
@@ -23,6 +24,7 @@ module Cryptobroker::Broker
         @signal_price_period = conf.fetch :signal_price_period, DEFAULTS[:signal_price_period] * @investor.timeframe
         @active_trading_refresh = conf.fetch :active_trading_refresh, DEFAULTS[:active_trading_refresh]
         @spread_factor = conf.fetch :active_trading_spread_factor, DEFAULTS[:active_trading_spread_factor]
+        @confirmator = Cryptobroker::Broker::Smart::Confirmator.new self, @api, @couple
         synchronize do
           @thread = nil
           @order = nil
@@ -55,7 +57,32 @@ module Cryptobroker::Broker
       end
 
       def confirm_order(archived)
-        false
+        synchronize do
+          completed = archived.base_change != 0 || archived.quote_change != 0
+          ActiveRecord::Base.with_connection do
+            Cryptobroker::Model::Balance.transaction do
+              if completed
+                last = @investor.balances.last
+                balance = @investor.balances.create!(
+                    {base: last.base + archived.base_change,
+                     quote: last.quote + archived.quote_change,
+                     timestamp: archived.timestamp})
+                balance.create_trade!(
+                    {type: archived.type.to_s,
+                     amount: archived.base_completed,
+                     price: archived.price})
+              end
+              @balance_changes.reject! { |id, _, _| id == archived.id }
+              #TODO: save new balance changes to db.
+            end
+          end
+          if completed
+            logger.info { 'Broker of investor [%s] completed execution of [%s] order with price [%f] for amount [%f].' %
+                [@investor.name, archived.type, archived.price, archived.base_completed] }
+          else
+            logger.debug { 'Broker of investor [%s] confirmed cancellation of intact [%s] order.' % [@investor.name, archived.type] }
+          end
+        end
       end
 
       private
@@ -64,7 +91,6 @@ module Cryptobroker::Broker
         synchronize do
           db_balance = ActiveRecord::Base.with_connection { @investor.balances.last }
           base, quote = db_balance.base, db_balance.quote
-          # base, quote = 0,0
           @balance_changes.each do |change|
             base += change[1]
             quote += change[2]
@@ -81,6 +107,7 @@ module Cryptobroker::Broker
           #     [@investor.name, type, price, amount] }
           # return false
           @order = @api.send :"place_#{type}_order", @couple, price, amount
+          #TODO: save order to db.
           logger.debug { 'Broker of investor [%s] placed [%s] order with price [%f] for amount [%f].' %
               [@investor.name, @order.type, @order.price, @order.base_amount] }
           cancel_order if @order.completed?
@@ -110,7 +137,8 @@ module Cryptobroker::Broker
           end
           change.unshift @order.id
           @balance_changes.push change
-          # @unconfirmed.push @order.id
+          #TODO: save new balances changes to db & remove order.
+          @confirmator.confirm @order.id, @order.timestamp
           @order = nil
           cancelled
         end

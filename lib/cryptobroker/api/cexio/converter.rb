@@ -16,13 +16,13 @@ module Cryptobroker::API
   class Cexio
     module Converter
 
-      protected
-
-      DEFAULT_CURRENCY_PREC = 8
-      CURRENCY_PRECS = {
+      DEFAULT_CURRENCY_PRECISION = 8
+      CURRENCY_PRECISIONS = {
           USD: 2, EUR: 2, DOGE: 2, FTC: 2, AUR: 2, DVC: 2, POT: 2, ANC: 2, MEC: 2, WDC: 2, DGB: 2, USDE: 2, MYR: 2,
           GHS: 8, BTC: 8, NMC: 8, LTC: 8, IXC: 8, DRK: 8
       }
+
+      protected
 
       def big_decimal(str)
         Float str
@@ -41,7 +41,7 @@ module Cryptobroker::API
 
       def precision(currency)
         currency = currency.to_sym rescue currency
-        CURRENCY_PRECS.fetch currency, DEFAULT_CURRENCY_PREC
+        CURRENCY_PRECISIONS.fetch currency, DEFAULT_CURRENCY_PRECISION
       end
 
       def split_couple(couple)

@@ -12,36 +12,5 @@ loop { sleep 60 }
 
 # api = app.api 'cexio'
 # couple = 'BTC/USD'
-# durations = []
-# loop do
-#   price = api.ticker(couple)[:ask]*1.2
-#   timer = Cryptobroker::Logging::Timer.new
-#   timer.start
-#   order = api.place_sell_order(couple, price, 0.02)
-#   puts JSON.pretty_generate(order)
-#   puts api.cancel_order(order[:id])
-#   loop do
-#     begin
-#       arch = api.archived_orders(couple, order[:timestamp].to_f - 1.0, order[:timestamp].to_f + 1.0)
-#     rescue
-#       retry
-#     end
-#     ts = order[:timestamp].to_i
-#     arch_ord = nil
-#     arch.each { |o|
-#       if Time.parse(o['time']).to_i == ts
-#         arch_ord = o
-#         break
-#       end
-#     }
-#     unless arch_ord.nil?
-#       timer.finish
-#       durations << timer.duration
-#       puts JSON.pretty_generate(arch_ord)
-#       break
-#     end
-#     sleep 5
-#   end
-#   app.logger.info timer.enhance('Waiting for archive')
-#   # app.logger.info 'Mean duration of waiting for archive: [%f]' % (durations.reduce(:+) / durations.size.to_f)
-# end
+# archived = api.archived_orders(couple).select { |o| o.base_change != 0 }.first
+# puts JSON.pretty_generate(archived.as_json)
