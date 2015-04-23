@@ -4,7 +4,7 @@ require_relative '../../api/error'
 module Cryptobroker::Broker
   class Smart
     class Confirmator
-      RETRY_DELAY = 15
+      RETRY_DELAY = 20
       TIME_SPAN_HALF = 1
 
       def initialize(trader, api, couple)
@@ -25,7 +25,7 @@ module Cryptobroker::Broker
       def perform_confirm(id, timestamp)
         loop do
           order = begin
-            api.archived_orders(@couple, timestamp - TIME_SPAN_HALF, timestamp - TIME_SPAN_HALF)
+            @api.archived_orders(@couple, timestamp - TIME_SPAN_HALF, timestamp + TIME_SPAN_HALF)
                 .find { |ord| ord.id == id }
           rescue Cryptobroker::API::RecoverableError
             nil

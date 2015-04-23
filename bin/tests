@@ -1,16 +1,12 @@
 #!/usr/bin/env ruby
 
 require 'cryptobroker'
-require 'cryptobroker/indicator/dema'
-require 'cryptobroker/broker/basic'
-require 'cryptobroker/downloader'
-require 'cryptobroker/chart'
 
 app = Cryptobroker.new('../config.yml')
-app.invest
-loop { sleep 60 }
+at_exit { app.logger.fatal { "Uncaught exception: #{$!.message} (#{$!.class})" } unless $!.nil? }
 
-# api = app.api 'cexio'
-# couple = 'BTC/USD'
-# archived = api.archived_orders(couple).select { |o| o.base_change != 0 }.first
-# puts JSON.pretty_generate(archived.as_json)
+app.invest
+
+#app.instance_variable_get(:@downloader).request_update 1
+
+loop { sleep 60 }

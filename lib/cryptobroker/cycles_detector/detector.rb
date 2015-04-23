@@ -7,7 +7,7 @@ module Cryptobroker::CyclesDetector
   class Detector
     include Cryptobroker::Logging
 
-    def initialize(markets, apis)
+    def initialize(markets, api_dispatcher)
       currencies = {}
       add_curr = ->(curr) { currencies[curr.id] = curr unless currencies.include? curr.id}
       markets.each { |market| add_curr[market.base] ; add_curr[market.quote] }
@@ -27,7 +27,7 @@ module Cryptobroker::CyclesDetector
         cycle.each_cons(2) do |b,e|
           new_cycle << BalanceLog.new(currencies[b.id])
           market, dir = markets_hash[[b.id, e.id]]
-          @markets[market.id] = MarketOrders.new market, apis[market.exchange.api] unless @markets.include? market.id
+          @markets[market.id] = MarketOrders.new market, api_dispatcher[market.exchange.api] unless @markets.include? market.id
           new_cycle << [@markets[market.id], dir]
         end
         new_cycle

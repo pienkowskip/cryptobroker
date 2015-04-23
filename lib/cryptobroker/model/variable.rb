@@ -15,6 +15,11 @@ module Cryptobroker::Model
       self.value = value.nil? ? nil : Marshal.dump(value)
     end
 
+    def set_value!(value)
+      set_value(value)
+      save!
+    end
+
     private
 
     def validate_getter

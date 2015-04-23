@@ -10,18 +10,11 @@ require_relative 'cryptobroker/logging'
 class Cryptobroker
   include Logging
   DELAY_PER_MARKET = 8
-  RETRIES = 2
 
   def initialize(config_file = 'config.yml')
     @config = Config.new(config_file)
     Database.init(@config.database[:development])
     @apis = {}
-  end
-
-  def load_apis(markets)
-    apis = {}
-    markets.map { |m| m.exchange.api }.uniq.each { |n| apis[n] = api n }
-    apis
   end
 
   def api(name)
@@ -43,11 +36,6 @@ class Cryptobroker
       broker = investor.get_broker_class.new investor.get_broker_conf, api(investor.market.exchange.api), investor
       Investor.new charts[key], indicator, broker, investor.name
     end
-    sleep 10
-    markets.each { |id| downloader.request_update id }
-  rescue StandardError => e
-    logger.fatal { "Uncaught exception: #{e.message} (#{e.class})" }
-    raise e
   end
 
   def trace
@@ -61,15 +49,7 @@ class Cryptobroker
 
   def cycles
     markets = Model::Exchange.first.markets.preload(:base, :quote)
-    detector = CyclesDetector::Detector.new markets, load_apis(markets)
+    detector = CyclesDetector::Detector.new markets, ->(name) { api name }
     detector.start
-  end
-
-  def trades
-    markets = {}
-    Model::Market.preload(:base, :quote).where(traced: true).each do |market|
-      markets[market.couple] = Model::LightTrade.map Model::Trade.unscoped.where(market: market).order(:timestamp)
-    end
-    markets
   end
 end
