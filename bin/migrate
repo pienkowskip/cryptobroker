@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'cryptobroker'
+require 'pry'
 
 class Migrate < Cryptobroker
 
@@ -93,7 +94,5 @@ class Migrate < Cryptobroker
   end
 end
 
-migrate = Migrate.new
-migrate.down
-migrate.up
-migrate.init_data
+$migrate = Migrate.new
+binding.pry
