@@ -9,6 +9,7 @@ module Cryptobroker::Model
     validates_belongs :market
     validates :name, presence: true, uniqueness: { scope: :market }
     validates :enabled, inclusion: [true, false]
+    validates :indicator_class, :broker_class, presence: true
     validate :validate_getters
     validates :timeframe, presence: true, numericality: { only_integer: true, greater_than: 0 }
     validates_before_type_case :beginning, presence: true
@@ -27,21 +28,27 @@ module Cryptobroker::Model
     end
 
     def load_classes
-      [:indicator, :broker].each do |attr|
-        require send(:"#{attr}_class").underscore
-      end
+      [:indicator, :broker].each { |attr| require send(:"#{attr}_class").underscore }
     end
 
     private
 
     def validate_getters
-      [:indicator_class, :indicator_conf, :broker_class, :broker_conf].each do |attr|
-        begin
-          send :"get_#{attr}"
-        rescue
-          errors.add(attr, errors.generate_message(attr, :invalid))
-        end
-      end
+      [:indicator_class, :broker_class].each { |attr| validate_class attr }
+      [:indicator_conf, :broker_conf].each { |attr| validate_conf attr }
+    end
+
+    def validate_class(attr)
+      require send(:"#{attr}").underscore
+      send :"get_#{attr}"
+    rescue LoadError, StandardError
+      errors.add(attr, errors.generate_message(attr, :invalid))
+    end
+
+    def validate_conf(attr)
+      send :"get_#{attr}"
+    rescue
+      errors.add(attr, errors.generate_message(attr, :invalid))
     end
   end
 end

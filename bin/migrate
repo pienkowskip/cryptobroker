@@ -52,7 +52,7 @@ class Migrate < Cryptobroker
     # currencies_array = Model::Currency.all
     currencies = {}
     currencies_array.each { |currency| currencies[currency.code] = currency }
-    cex = Model::Exchange.create({name: 'cex.io', api: 'cexio'})
+    cex = Model::Exchange.create({name: 'cex.io', api_class: 'Cryptobroker::API::Cexio'})
     # cex = Model::Exchange.first
     market = ->(curr1, curr2) { {exchange: cex, base: currencies[curr1], quote: currencies[curr2], traced: true} }
     Model::Market.create([

@@ -126,7 +126,7 @@ class Cryptobroker::Downloader
   private
 
   def create_market(record)
-    Market.new record, @api_dispatcher[record.exchange.api]
+    Market.new record, @api_dispatcher[record.exchange]
   end
 
   def market(id)

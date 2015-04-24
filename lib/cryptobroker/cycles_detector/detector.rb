@@ -27,7 +27,7 @@ module Cryptobroker::CyclesDetector
         cycle.each_cons(2) do |b,e|
           new_cycle << BalanceLog.new(currencies[b.id])
           market, dir = markets_hash[[b.id, e.id]]
-          @markets[market.id] = MarketOrders.new market, api_dispatcher[market.exchange.api] unless @markets.include? market.id
+          @markets[market.id] = MarketOrders.new market, api_dispatcher[market.exchange] unless @markets.include? market.id
           new_cycle << [@markets[market.id], dir]
         end
         new_cycle

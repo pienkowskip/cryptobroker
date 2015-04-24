@@ -23,9 +23,9 @@ module Cryptobroker::API
     AMOUNT_DECREMENTS = 2
 
     def initialize(auth)
-      @username = auth[:username]
-      @api_key = auth[:api_key]
-      @api_secret = auth[:api_secret]
+      @username = auth.fetch :username
+      @api_key = auth.fetch :api_key
+      @api_secret = auth.fetch :api_secret
       @http_client = Net::HTTP::Persistent.new self.class.name
       @http_client.read_timeout = TIMEOUT
       @http_client.open_timeout = TIMEOUT

@@ -28,7 +28,7 @@ module Cryptobroker::Broker
       DEFAULTS = {
           signal_price_period: 0.5,
           active_trading_refresh: 30,
-          active_trading_spread_factor: 0.3
+          active_trading_spread_factor: 0.2
       }
 
       def initialize(conf, api, investor)
