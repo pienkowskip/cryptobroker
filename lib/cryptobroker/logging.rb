@@ -32,12 +32,19 @@ module Cryptobroker::Logging
   end
 
   @loggers = {}
+  @logdev = STDOUT
+  @level = Logger::DEBUG
+
+  def self.setup(logdev, level)
+    @logdev, @level = logdev, level
+    self
+  end
 
   def self.logger_for(classname)
     return @loggers[classname] if @loggers.include? classname
-    logger = Logger.new(STDOUT)
+    logger = Logger.new(@logdev)
     logger.progname = classname
-    logger.level = Logger::DEBUG
+    logger.level = @level
     @loggers[classname] = logger
   end
 end
