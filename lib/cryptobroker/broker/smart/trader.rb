@@ -187,7 +187,9 @@ module Cryptobroker::Broker
           @confirmator.confirm change.order_id, change.timestamp
           cancelled
         end
-      rescue Cryptobroker::API::RecoverableError
+      rescue Cryptobroker::API::RecoverableError => error
+        logger.error { 'Cancelling order of broker of investor [%s] failure. Will retry in %ds. Exception: %s (%s).' %
+            [@investor.name, FAST_RETRY_DELAY, error.message, error.class] }
         sleep FAST_RETRY_DELAY
         retry
       end
@@ -203,7 +205,9 @@ module Cryptobroker::Broker
         duration = diff[]
         sleep duration if duration > 0
         !cancel_order
-      rescue Cryptobroker::API::RecoverableError
+      rescue Cryptobroker::API::RecoverableError => error
+        logger.error { 'Signal price trading of broker of investor [%s] for [%s] order failure. Will retry in %ds. Exception: %s (%s).' %
+            [@investor.name, type, SLOW_RETRY_DELAY, error.message, error.class] }
         sleep SLOW_RETRY_DELAY
         retry
       end
@@ -222,7 +226,9 @@ module Cryptobroker::Broker
         return true if place_order type, send(:"#{type}_active_price")
         sleep @active_trading_refresh
         !cancel_order
-      rescue Cryptobroker::API::RecoverableError
+      rescue Cryptobroker::API::RecoverableError => error
+        logger.error { 'Active price trading of broker of investor [%s] for [%s] order failure. Will retry in %ds. Exception: %s (%s).' %
+            [@investor.name, type, SLOW_RETRY_DELAY, error.message, error.class] }
         sleep SLOW_RETRY_DELAY
         retry
       end

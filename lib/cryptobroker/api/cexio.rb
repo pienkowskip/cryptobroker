@@ -20,6 +20,7 @@ module Cryptobroker::API
     TIMEOUT = 5
     TRANSACTION_FEE = '0.002'.to_d
     PRICE_DIGITS = 9
+    AMOUNT_DECREMENTS = 2
 
     def initialize(auth)
       @username = auth[:username]
@@ -50,18 +51,21 @@ module Cryptobroker::API
 
     def place_buy_order(couple, price, amount_in)
       price, price_str = norm_price price
-      base_prec, quote_prec = couple.split('/').map(&method(:precision))
-      amount_in = big_decimal(amount_in).truncate(quote_prec)
-      amount_in -= (amount_in * TRANSACTION_FEE / (1.to_d + TRANSACTION_FEE)).ceil quote_prec
-      amount_in /= price
-      amount_in = amount_in.floor base_prec
-      place_order couple, :buy, price_str, amount_in.to_s
+      base_prec, quote_prec = split_couple(couple).map(&method(:precision))
+      place_order_amount_decrementer big_decimal(amount_in).truncate(quote_prec), quote_prec do |amount|
+        amount -= (amount * TRANSACTION_FEE / (1.to_d + TRANSACTION_FEE)).ceil quote_prec
+        amount /= price
+        amount = amount.floor base_prec
+        place_order couple, :buy, price_str, amount
+      end
     end
 
     def place_sell_order(couple, price, amount_in)
       _, price_str = norm_price price
-      base_prec = precision(couple.split('/')[0])
-      place_order couple, :sell, price_str, big_decimal(amount_in).truncate(base_prec).to_s
+      base_prec = precision(split_couple(couple)[0])
+      place_order_amount_decrementer big_decimal(amount_in).truncate(base_prec), base_prec do |amount|
+        place_order couple, :sell, price_str, amount
+      end
     end
 
     def cancel_order(id)
@@ -89,6 +93,19 @@ module Cryptobroker::API
     end
 
     private
+
+    def place_order_amount_decrementer(amount, precision)
+      decrements = AMOUNT_DECREMENTS
+      begin
+        yield amount
+      rescue LogicError => err
+        raise err unless err.message == 'Error: Place order error: Insufficient funds.'
+        raise err if decrements <= 0
+        decrements -= 1
+        amount -= Rational(1, 10 ** precision).to_d(1)
+        retry
+      end
+    end
 
     def place_order(couple, type, price, amount)
       OpenOrder.new api_call('place_order', {type: type.to_s, price: price.to_s, amount: amount.to_s}, true, couple), couple
