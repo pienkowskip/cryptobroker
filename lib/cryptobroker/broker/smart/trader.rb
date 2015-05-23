@@ -129,6 +129,13 @@ module Cryptobroker::Broker
         end
       end
 
+      def terminate
+        synchronize do
+          cancel
+          @confirmator.terminate
+        end
+      end
+
       private
 
       def balance

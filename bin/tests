@@ -3,15 +3,11 @@
 require 'cryptobroker'
 require 'pry'
 
-app = Cryptobroker.new('../config.yml')
-at_exit { app.logger.fatal { "Uncaught exception: #{$!.message} (#{$!.class})" } unless $!.nil? }
-
-# api = app.api_by_name 'cex.io'
-# cpl = 'BTC/USD'
-# puts JSON.pretty_generate(api.ticker(cpl).as_json)
+app = Cryptobroker.new('../dev-config.yml')
 
 app.invest
 
-# loop { sleep 60 }
+# sleep
 app.pry
-raise SystemExit, 'application console exit'
+
+app.terminate

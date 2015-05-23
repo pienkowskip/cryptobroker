@@ -71,7 +71,7 @@ class Cryptobroker::Chart
     @safety_lag, @buffer_size = safety_lag, buffer_size
     @last = Bar.new @beginning, @timeframe
     synchronize do
-      @indicators = []
+      @listeners = []
       @buffer = []
       @size = 0
       @updated = nil
@@ -95,21 +95,39 @@ class Cryptobroker::Chart
       end
     end
     @requester.abort_on_exception = true
+    logger.debug { 'Chart (market id: [%d], timeframe: [%d], started: [%s]) started.' % [@market_id, @timeframe, @beginning] }
   end
 
   def get(idx)
-    synchronize { [buffer_copy(idx - (@size - @buffer.size)), @size, @updated] }
+    synchronize do
+      idx -= @size - @buffer.size
+      idx = 0 if idx < 0
+      [buffer_copy(idx), @size, @updated]
+    end
   end
 
-  def register_indicator(indicator)
+  def register_listener(listener)
     synchronize do
-      @indicators.push indicator
-      indicator.notice @size if @size > 0
+      @listeners.push listener
+      listener.notice @size if @size > 0
     end
+  end
+
+  def remove_listener(listener)
+    synchronize { @listeners.delete listener }
   end
 
   def notice(trades, updated)
     @queue.push [trades, updated]
+  end
+
+  def terminate
+    synchronize do
+      raise RuntimeError, 'terminating chart with registered listeners' unless @listeners.empty?
+      @requester.terminate.join
+      @handler.terminate.join
+    end
+    logger.debug { 'Chart (market id: [%d], timeframe: [%d], started: [%s]) terminated.' % [@market_id, @timeframe, @beginning] }
   end
 
   private
@@ -145,7 +163,7 @@ class Cryptobroker::Chart
         @size = new_size
         @buffer = new_buffer
         logger.debug { 'Chart (market id: [%d], timeframe: [%d], started: [%s]) developed [%d] new bars of [%d] all bars.' % [@market_id, @timeframe, @beginning, new_bars, @size] }
-        @indicators.each { |indicator| indicator.notice @size }
+        @listeners.each { |listener| listener.notice @size }
       end
     end
   end

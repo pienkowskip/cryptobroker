@@ -2,7 +2,7 @@
 
 require 'cryptobroker'
 
-app = Cryptobroker.new('../config.yml')
+app = Cryptobroker.new('../dev-config.yml')
 cycles = app.cycles
 
 top_ten = []

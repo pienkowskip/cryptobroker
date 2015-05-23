@@ -9,12 +9,17 @@ require_relative 'cryptobroker/logging'
 
 class Cryptobroker
   include Logging
-  DELAY_PER_MARKET = 8
+
+  TRACE_REFRESH_INTERVAL = 10 * 60
+
+  attr_reader :tracer
 
   def initialize(config_file = 'config.yml')
     @config = Config.new(config_file)
     Database.init(@config.database[:development])
     @apis = {}
+    @charts = {}
+    @investors = []
   end
 
   def api(exchange)
@@ -28,33 +33,72 @@ class Cryptobroker
     ActiveRecord::Base.with_connection { api Cryptobroker::Model::Exchange.find_by_name!(exchange_name) }
   end
 
+  def downloader(preload_market_ids = [], thread_pool_size = 3)
+    return @downloader unless @downloader.nil?
+    @downloader = Downloader.new ->(exchange) { api exchange }, thread_pool_size, preload_market_ids
+  end
+
+  def charts
+    @charts.dup
+  end
+
+  def investors
+    @investors.dup
+  end
+
   def invest
-    investors = ActiveRecord::Base.with_connection { Model::Investor.preload(market: [:exchange, :base, :quote]).enabled.to_a }
-    markets = investors.map(&:market_id).uniq
-    downloader = Downloader.new ->(exchange) { api exchange }, 5, markets
-    charts = {}
-    investors.map! do |investor|
+    raise RuntimeError, 'already started investing' unless @investors.empty?
+    @investors = ActiveRecord::Base.with_connection { Model::Investor.preload(market: [:exchange, :base, :quote]).enabled.to_a }
+    return nil if @investors.empty?
+    markets = @investors.map(&:market_id).uniq
+    downloader = downloader(markets)
+    @investors.map! do |investor|
       key = [investor.market_id, investor.beginning, investor.timeframe]
-      charts[key] = Chart.new downloader, *key unless charts.include? key
+      @charts[key] = Chart.new downloader, *key unless @charts.include? key
       investor.load_classes
       indicator = investor.get_indicator_class.new investor.get_indicator_conf
       broker = investor.get_broker_class.new investor.get_broker_conf, api(investor.market.exchange), investor
-      Investor.new charts[key], indicator, broker, investor.name
+      Investor.new @charts[key], indicator, broker, investor.name
     end
+    logger.info { 'Cryptobroker started investing with [%d] investors.' % @investors.size }
+    investors
   end
 
-  def trace
+  def trace(refresh_interval = TRACE_REFRESH_INTERVAL)
+    raise RuntimeError, 'already started tracing' unless @tracer.nil?
     markets = ActiveRecord::Base.with_connection { Model::Market.where(traced: true).pluck(:id) }
-    downloader = Downloader.new ->(exchange) { api exchange }, 5, markets
-    loop do
-      markets.each { |id| downloader.request_update id }
-      sleep markets.size * DELAY_PER_MARKET
+    return nil if markets.empty?
+    downloader = downloader(markets)
+    @tracer = Thread.new do
+      loop do
+        markets.each { |id| downloader.request_update id }
+        sleep refresh_interval
+      end
     end
+    @tracer.abort_on_exception = true
+    logger.info { 'Cryptobroker started tracing for [%d] markets.' % markets.size }
+    @tracer
   end
 
   def cycles
     markets = Model::Exchange.first.markets.preload(:base, :quote)
     detector = CyclesDetector::Detector.new markets, ->(name) { api name }
     detector.start
+  end
+
+  def terminate
+    @investors.each &:terminate
+    @investors = []
+    @charts.values.each &:terminate
+    @charts = {}
+    unless @tracer.nil?
+      @tracer.terminate.join
+      @tracer = nil
+    end
+    unless @downloader.nil?
+      @downloader.abort
+      @downloader = nil
+    end
+    logger.info { 'Cryptobroker terminated.' }
   end
 end

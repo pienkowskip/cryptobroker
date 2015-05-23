@@ -1,8 +1,0 @@
-#!/usr/bin/env ruby
-
-require 'cryptobroker'
-
-app = Cryptobroker.new('../config.yml')
-at_exit { app.logger.fatal { "Uncaught exception: #{$!.message} (#{$!.class})" } unless $!.nil? }
-app.invest
-loop { sleep 60 }

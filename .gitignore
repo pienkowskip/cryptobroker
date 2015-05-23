@@ -1,6 +1,7 @@
 *.gem
 *.rbc
 /config.yml
+/*-config.yml
 /.config
 /Gemfile.lock
 /InstalledFiles

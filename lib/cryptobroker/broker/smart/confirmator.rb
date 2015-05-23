@@ -20,6 +20,10 @@ module Cryptobroker::Broker
         @queue.push [id, timestamp]
       end
 
+      def terminate
+        @thread.terminate.join
+      end
+
       private
 
       def perform_confirm(id, timestamp)

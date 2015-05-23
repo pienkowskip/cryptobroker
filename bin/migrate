@@ -7,7 +7,7 @@ class Migrate < Cryptobroker
 
   attr_reader :migrations
 
-  def initialize(config = '../config.yml')
+  def initialize(config = '../dev-config.yml')
     super config
     filename = '../db/migrate/%s.rb'
     @migrations = Dir.glob(filename % '*').sort

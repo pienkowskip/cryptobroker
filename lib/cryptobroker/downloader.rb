@@ -86,6 +86,7 @@ class Cryptobroker::Downloader
   end
 
   include MonitorMixin
+  include Cryptobroker::Logging
 
   def initialize(api_dispatcher, threads, preload_market_ids = [])
     super()
@@ -109,6 +110,7 @@ class Cryptobroker::Downloader
       th.abort_on_exception = true
       th
     end
+    logger.debug { 'Trades downloader with [%d] pooled threads started.' % threads }
   end
 
   def register_chart(chart, market_id)
@@ -119,8 +121,9 @@ class Cryptobroker::Downloader
     @queue.push market_id
   end
 
-  def join
-    @pool.each &:join
+  def abort
+    @pool.each(&:terminate).each(&:join)
+    logger.debug { 'Trades downloader aborted.' }
   end
 
   private
