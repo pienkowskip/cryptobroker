@@ -1,5 +1,6 @@
 require 'thread'
 require 'monitor'
+require_relative '../illegal_state_error'
 require_relative 'logging'
 
 class Cryptobroker::Chart
@@ -123,7 +124,7 @@ class Cryptobroker::Chart
 
   def terminate
     synchronize do
-      raise RuntimeError, 'terminating chart with registered listeners' unless @listeners.empty?
+      raise IllegalStateError, 'terminating chart with registered listeners' unless @listeners.empty?
       @requester.terminate.join
       @handler.terminate.join
     end

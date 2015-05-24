@@ -1,3 +1,4 @@
+require_relative 'illegal_state_error'
 require_relative 'cryptobroker/version'
 require_relative 'cryptobroker/config'
 require_relative 'cryptobroker/database'
@@ -47,7 +48,7 @@ class Cryptobroker
   end
 
   def invest
-    raise RuntimeError, 'already started investing' unless @investors.empty?
+    raise IllegalStateError, 'already started investing' unless @investors.empty?
     @investors = ActiveRecord::Base.with_connection { Model::Investor.preload(market: [:exchange, :base, :quote]).enabled.to_a }
     return nil if @investors.empty?
     markets = @investors.map(&:market_id).uniq
@@ -65,7 +66,7 @@ class Cryptobroker
   end
 
   def trace(refresh_interval = TRACE_REFRESH_INTERVAL)
-    raise RuntimeError, 'already started tracing' unless @tracer.nil?
+    raise IllegalStateError, 'already started tracing' unless @tracer.nil?
     markets = ActiveRecord::Base.with_connection { Model::Market.where(traced: true).pluck(:id) }
     return nil if markets.empty?
     downloader = downloader(markets)
