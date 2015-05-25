@@ -3,8 +3,8 @@ require_relative '../illegal_state_error'
 
 module Cryptobroker::Logging
   class Timer
-    SIMPLE_FORMAT = '%<msg>s (in %<time>.3fs)'
-    COLOR_FORMAT = "\e[1m\e[36m[%<time>.3fs]\e[0m %<msg>s"
+    SIMPLE_FORMAT = '%<msg>s (in %<time>.3fs)'.freeze
+    COLOR_FORMAT = "\e[1m\e[36m[%<time>.3fs]\e[0m %<msg>s".freeze
     attr_reader :duration
 
     def start

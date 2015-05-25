@@ -70,8 +70,7 @@ class Cryptobroker::Downloader
         @charts << chart
         trades = ActiveRecord::Base.with_connection do
           query = @record.trades.where Cryptobroker::Model::Trade.arel_table[:timestamp].gteq(chart.beginning)
-          #TODO: try to use pluck
-          Cryptobroker::Model::LightTrade.map(query)
+          Cryptobroker::Model::LightTrade.map query.pluck(*Cryptobroker::Model::LightTrade::ATTRIBUTES)
         end
         notice chart, trades, trades.last.timestamp - 0.1 unless trades.empty?
       end

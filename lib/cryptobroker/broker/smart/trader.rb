@@ -29,7 +29,7 @@ module Cryptobroker::Broker
           signal_price_period: 0.5,
           active_trading_refresh: 30,
           active_trading_spread_factor: 0.2
-      }
+      }.freeze
 
       def initialize(conf, api, investor)
         super()

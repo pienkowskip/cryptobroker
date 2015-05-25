@@ -16,7 +16,7 @@ module Cryptobroker::API
     include Cryptobroker::Logging
     include Converter
 
-    API_URL = 'https://cex.io/api'
+    API_URL = 'https://cex.io/api'.freeze
     TIMEOUT = 5
     TRANSACTION_FEE = '0.002'.to_d
     PRICE_DIGITS = 9

@@ -1,8 +1,6 @@
 require_relative 'logging'
 
 class Cryptobroker::Database
-  ENUM_TYPES = [:transaction_type]
-
   def self.init(config)
     require 'active_record'
 
@@ -52,7 +50,7 @@ class Cryptobroker::Database
       end
     end
 
-    Dir.glob(File.dirname(__FILE__) + '/model/*.rb').each { |model| require_relative model }
+    Dir.glob(File.join File.dirname(__FILE__), 'model', '*.rb').each { |model| require_relative model }
 
     ActiveRecord::Base.establish_connection(config)
     ActiveRecord::Base.logger = Cryptobroker::Logging.logger_for ActiveRecord::Base.name

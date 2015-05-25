@@ -1,6 +1,6 @@
 module Cryptobroker::Model
   class Transaction < ActiveRecord::Base
-    TYPES = ['buy', 'sell']
+    TYPES = ['buy', 'sell'].freeze
     self.inheritance_column = nil
 
     belongs_to :balance

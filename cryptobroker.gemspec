@@ -5,7 +5,7 @@ require 'cryptobroker/version'
 
 Gem::Specification.new do |spec|
   spec.name          = 'cryptobroker'
-  spec.version       = Cryptobroker::VERSION
+  spec.version       = Cryptobroker::VERSION.dup
   spec.authors       = ['Paweł Peńkowski']
   spec.email         = ['pienkowskip@gmail.com']
   spec.summary       = 'Gem for Crypto Currencies trading'
