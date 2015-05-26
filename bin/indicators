@@ -1,19 +1,12 @@
 #!/usr/bin/env ruby
 
-require 'cryptobroker'
-require 'cryptobroker/indicator/final_score_judging'
-require 'cryptobroker/indicator/risk_judging'
+require_relative '../lib/cryptobroker/evaluator/config'
 
-app = Cryptobroker.new('../config.yml')
-trades = app.trades
-timeframes = [1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 7.5, 10, 15, 20, 30, 40, 60, 90].map { |p| p * 60 }
-judging_tool =
-    case ARGV[0]
-      when 'risk'
-        Cryptobroker::Indicator::RiskJudging.new(timeframes.reverse, 1000, 0.002)
-      when 'final_score'
-        Cryptobroker::Indicator::FinalScoreJudging.new(100, timeframes.reverse, 1000, 0.002)
-      else
-        raise ArgumentError, 'invalid command line arguments'
-    end
-judging_tool.judge trades.values
+config = Cryptobroker::Evaluator::Config.new('../tmp/indicator_test_case.yml')
+puts '--- indicators ---'
+puts config.indicators.map(&:to_s)
+(Cryptobroker::Evaluator::Config::ENTRIES - [:indicators]).each do |entry|
+  puts "--- #{entry} ---"
+  puts config.public_send(entry).to_s
+end
+

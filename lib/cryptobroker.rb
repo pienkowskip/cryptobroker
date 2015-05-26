@@ -17,7 +17,7 @@ class Cryptobroker
 
   def initialize(config_file = 'config.yml')
     @config = Config.new(config_file)
-    Database.init(@config.database[:development])
+    Database.init(@config.database)
     @apis = {}
     @charts = {}
     @investors = []

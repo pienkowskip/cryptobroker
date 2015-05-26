@@ -1,13 +1,18 @@
 require 'yaml'
 require_relative 'logging'
+require_relative 'exceptions'
 
 class Cryptobroker::Config
   attr_reader :application, :auth, :database
 
   def initialize(fname = 'config.yml')
-    config = deep_symbolize_keys(YAML.load_file(fname))
+    begin
+      config = deep_symbolize_keys(YAML.load_file(fname))
+    rescue SyntaxError
+      raise Cryptobroker::ConfigError, 'configuration file invalid syntax'
+    end
     [:database, :auth, :application].each do |key|
-      raise 'configuration file not sufficient' unless config.include? key
+      raise Cryptobroker::ConfigError, "configuration file not sufficient: missing '#{key}' entry" unless config.include? key
       instance_variable_set :"@#{key}", config[key]
     end
     setup_logger
@@ -27,8 +32,8 @@ class Cryptobroker::Config
     level = Logger::Severity.const_get(logger.fetch(:level).upcase.to_sym, false)
     Cryptobroker::Logging.setup file, level
     true
-  rescue
-    raise 'application.logger configuration entry invalid'
+  rescue => err
+    raise Cryptobroker::ConfigEntryError.new('application.logger', err)
   end
 
   def deep_symbolize_keys(hash)
