@@ -4,11 +4,20 @@ require_relative 'smart/trader'
 
 module Cryptobroker::Broker
   class Smart
+    include Cryptobroker::Logging
+
     CONCURRENCY_DELAY = 0.3
 
     def initialize(conf, api, investor)
       @trader = Trader.new conf, api, investor
-      @signals = Queue.new
+      @signals = begin
+        queue, signal = Queue.new, @trader.ongoing_signal
+        unless signal.nil?
+          queue.push signal
+          logger.info { 'Broker of investor [%s] restored [%s] signal generated at [%s].' % [investor.name, signal[0], signal[1]] }
+        end
+        queue
+      end
       @manager = Thread.new do
         loop do
           signal = @signals.pop
@@ -33,6 +42,11 @@ module Cryptobroker::Broker
 
     def cancel
       @trader.cancel
+    end
+
+    def abort
+      @manager.terminate
+      @trader.abort
     end
 
     def terminate

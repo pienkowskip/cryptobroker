@@ -7,7 +7,7 @@ class Cryptobroker::API::Cexio::Ticker < Cryptobroker::API::Cexio::Entity
     set_attrs raw_ticker, timestamp: 'timestamp', bid: 'bid', ask: 'ask', last: 'last'
     convert_attrs timestamp: :time, bid: :big_decimal, ask: :big_decimal, last: :big_decimal
   rescue
-    raise Cryptobroker::API::Cexio::ResponseError
+    raise create_response_error
   end
 
   def spread

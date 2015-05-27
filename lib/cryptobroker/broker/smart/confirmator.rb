@@ -1,5 +1,5 @@
 require 'thread'
-require_relative '../../api/error'
+require_relative '../../api/errors'
 
 module Cryptobroker::Broker
   class Smart

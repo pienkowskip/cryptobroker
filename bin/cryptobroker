@@ -6,14 +6,16 @@ app = Cryptobroker.new ARGV.fetch(0, 'config.yml')
 
 at_exit do
   exc = $!
-  unless exc.nil?
+  if exc.nil?
+    app.logger.fatal { 'Unexpected application exit.' }
+  else
     if exc.is_a? SystemExit
       app.terminate
     else
       begin
         app.investors.each { |investor| investor.abort rescue nil }
       ensure
-        app.logger.fatal { "Uncaught exception: #{exc.message} (#{exc.class})" }
+        app.logger.fatal { "Uncaught exception: #{exc.message} (#{exc.class})." }
       end
     end
   end

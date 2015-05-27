@@ -3,7 +3,7 @@ require 'uri'
 require 'json'
 require 'net/http/persistent'
 require_relative '../logging'
-require_relative 'cexio/error'
+require_relative 'errors'
 require_relative 'cexio/converter'
 require_relative 'cexio/trade'
 require_relative 'cexio/ticker'
@@ -75,7 +75,7 @@ module Cryptobroker::API
         parse_json_answer answer
       end
       api_call 'cancel_order', {id: id.to_s}, true, '', boolean_parser
-    rescue LogicError => err
+    rescue Cryptobroker::API::LogicError => err
       return false if err.message == 'Error: Order not found'
       raise
     end
@@ -98,8 +98,7 @@ module Cryptobroker::API
       decrements = AMOUNT_DECREMENTS
       begin
         yield amount
-      rescue LogicError => err
-        raise err unless err.message == 'Error: Place order error: Insufficient funds.'
+      rescue Cryptobroker::API::InsufficientFundsError => err
         raise err if decrements <= 0
         decrements -= 1
         amount -= Rational(1, 10 ** precision).to_d(1)
@@ -109,6 +108,10 @@ module Cryptobroker::API
 
     def place_order(couple, type, price, amount)
       OpenOrder.new api_call('place_order', {type: type.to_s, price: price.to_s, amount: amount.to_s}, true, couple), couple
+    rescue Cryptobroker::API::LogicError => err
+      raise Cryptobroker::API::InsufficientFundsError, err.message if err.message == 'Error: Place order error: Insufficient funds.'
+      raise Cryptobroker::API::InvalidAmountError, err.message if err.message == 'Invalid amount'
+      raise
     end
 
     def api_call(method, param = {}, priv = false, action = '', parser = nil)
@@ -145,9 +148,10 @@ module Cryptobroker::API
         res.value
       rescue Net::HTTPExceptions => err
         err = err.response
-        raise err.is_a?(Net::HTTPServerError) ? ServerError : RequestError, "HTTP error: #{err.code} #{err.message}"
+        raise err.is_a?(Net::HTTPServerError) ? Cryptobroker::API::ServerError : Cryptobroker::API::RequestError,
+              "HTTP error: #{err.code} #{err.message}"
       rescue
-        raise ConnectivityError, 'unable to connect API'
+        raise Cryptobroker::API::ConnectivityError, 'unable to connect API'
       end
       res.body
     end
@@ -156,9 +160,9 @@ module Cryptobroker::API
       begin
         answer = JSON.parse(answer)
       rescue
-        raise ResponseError, 'parsing response JSON failure'
+        raise Cryptobroker::API::ResponseError, 'parsing response JSON failure'
       end
-      raise LogicError, answer['error'] if answer.include? 'error'
+      raise Cryptobroker::API::LogicError, answer['error'] if answer.include? 'error'
       answer
     end
 

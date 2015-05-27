@@ -9,7 +9,7 @@ class Cryptobroker::API::Cexio::OpenOrder < Cryptobroker::API::Cexio::Entity
                   price: :big_decimal, base_amount: :big_decimal, base_pending: :big_decimal
     @quote_prec = precision split_couple(couple)[1]
   rescue
-    raise Cryptobroker::API::Cexio::ResponseError
+    raise create_response_error
   end
 
   def base_completed

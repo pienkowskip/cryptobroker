@@ -1,13 +1,13 @@
 require 'thread'
 require 'monitor'
 require_relative 'logging'
-require_relative 'api/error'
+require_relative 'api/errors'
 
 class Cryptobroker::Downloader
   class Market
     include Cryptobroker::Logging
 
-    ATTEMPTS = 2
+    ATTEMPTS = 3
     RETRY_DELAY = 3
 
     def initialize(record, api)
@@ -36,7 +36,7 @@ class Cryptobroker::Downloader
           sleep RETRY_DELAY
           retry
         end
-        logger.error { ActiveRecord::Base.with_connection {
+        logger.warn { ActiveRecord::Base.with_connection {
           'Fetching trades from [%s] market of [%s] exchange ended in failure after %d attempts. Exception: %s (%s).' %
               [@record.couple, @record.exchange.name, ATTEMPTS, error.message, error.class]
         }}

@@ -1,5 +1,5 @@
 require_relative 'converter'
-require_relative 'error'
+require_relative '../../api/errors'
 
 module Cryptobroker::API
   class Cexio
@@ -27,6 +27,10 @@ module Cryptobroker::API
           converter = method converter if converter.is_a?(Symbol) || converter.is_a?(String)
           instance_variable_set attr, converter.call(instance_variable_get attr)
         end
+      end
+
+      def create_response_error
+        Cryptobroker::API::ResponseError.new('invalid response data')
       end
     end
   end

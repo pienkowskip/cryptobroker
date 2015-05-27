@@ -1,6 +1,6 @@
 require 'monitor'
 require_relative '../../logging'
-require_relative '../../api/error'
+require_relative '../../api/errors'
 require_relative 'confirmator'
 
 module Cryptobroker::Broker
@@ -18,6 +18,9 @@ module Cryptobroker::Broker
             @base = -@base
           end
         end
+      end
+
+      class InvalidBalanceError < StandardError
       end
 
       include Cryptobroker::Logging
@@ -40,9 +43,10 @@ module Cryptobroker::Broker
 
         ActiveRecord::Base.with_connection do
           @couple = @investor.market.couple
-          {order: nil, balance_changes: []}.each do |name, default|
-            name = name.to_s
-            var = @investor.variables.find_by_name name
+          vars_init = {'order' => nil, 'balance_changes' => [], 'ongoing_signal' => nil}
+          vars = Hash[@investor.variables.where(name: vars_init.keys).map { |var| [var.name, var] }]
+          vars_init.each do |name, default|
+            var = vars[name]
             if var.nil?
               var = @investor.variables.build name: name
               var.set_value! default
@@ -53,46 +57,73 @@ module Cryptobroker::Broker
 
         @confirmator = Cryptobroker::Broker::Smart::Confirmator.new self, @api, @couple
         synchronize do
+          @invalid_balance = false
           @thread = nil
           @order = @db_order.get_value
           @balance_changes = @db_balance_changes.get_value
           @balance_changes.each { |change| @confirmator.confirm change.order_id, change.timestamp }
           unless @order.nil?
-            @thread = Thread.new { cancel_order }
+            @thread = Thread.new do
+              synchronize do
+                cancel_order
+                @thread = nil
+              end
+            end
             @thread.abort_on_exception = true
+            logger.debug { 'Broker of investor [%s] restored unfinished order. Scheduled for cancellation.' % [@investor.name] }
           end
         end
       end
 
       def cancel
         synchronize do
-          trading = !@thread.nil?
-          if trading
-            @thread.terminate
-            @thread = nil
-          end
-          cancel_order
-          logger.info { 'Broker of investor [%s] cancelled execution of last order.' % @investor.name } if trading
+          ActiveRecord::Base.with_connection { @db_ongoing_signal.set_value! nil }
+          return unless perform_cancel
+          logger.info { 'Broker of investor [%s] cancelled execution of current order.' % @investor.name }
         end
+      end
+
+      def abort
+        return unless perform_cancel
+        logger.warn { 'Broker of investor [%s] interrupted execution of current order.' % @investor.name }
       end
 
       def handle_order(type, timestamp, price)
         synchronize do
+          if @invalid_balance
+            logger.warn { 'Broker of investor [%s] is suspended because of insufficient funds. Requested [%s] order discarded.' %
+                [@investor.name, type] }
+            return
+          end
           cancel
+          ActiveRecord::Base.with_connection { @db_ongoing_signal.set_value! [type, timestamp, price].freeze }
           @thread = Thread.new do
-            logger.info { 'Broker of investor [%s] started execution of [%s] order.' % [@investor.name, type] }
-            logger.debug { 'Broker of investor [%s] is starting signal price trading for [%s] order.' % [@investor.name, type] }
-            traded = signal_price_trading type, timestamp, price
-            logger.debug { 'Broker of investor [%s] %s finished signal price trading for [%s] order.' %
-                [@investor.name, traded ? 'completely' : 'incompletely', type] }
-            unless traded
-              logger.debug { 'Broker of investor [%s] is starting active price trading for [%s] order.' % [@investor.name, type] }
-              traded = active_trading type until traded
-              logger.debug { 'Broker of investor [%s] completely finished signal price trading for [%s] order.' % [@investor.name, type] }
-            end
-            synchronize do
-              @thread = nil
-              logger.info { 'Broker of investor [%s] successfully finished execution of [%s] order.' % [@investor.name, type] }
+            begin
+              logger.info { 'Broker of investor [%s] started execution of [%s] order.' % [@investor.name, type] }
+              logger.debug { 'Broker of investor [%s] is starting signal price trading for [%s] order.' % [@investor.name, type] }
+              traded = signal_price_trading type, timestamp, price
+              logger.debug { 'Broker of investor [%s] %s finished signal price trading for [%s] order.' %
+                  [@investor.name, traded ? 'completely' : 'incompletely', type] }
+              unless traded
+                logger.debug { 'Broker of investor [%s] is starting active price trading for [%s] order.' % [@investor.name, type] }
+                traded = active_trading type until traded
+                logger.debug { 'Broker of investor [%s] completely finished signal price trading for [%s] order.' % [@investor.name, type] }
+              end
+            rescue InvalidBalanceError
+              synchronize do
+                @invalid_balance = true
+                ActiveRecord::Base.with_connection { @db_ongoing_signal.set_value! nil }
+                logger.error { 'Broker of investor [%s] suspended orders execution because of insufficient funds. Check account balance and restart investor.' %
+                    @investor.name }
+                cancel_order
+                @thread = nil
+              end
+            else
+              synchronize do
+                ActiveRecord::Base.with_connection { @db_ongoing_signal.set_value! nil }
+                @thread = nil
+                logger.info { 'Broker of investor [%s] successfully finished execution of [%s] order.' % [@investor.name, type] }
+              end
             end
           end
           @thread.abort_on_exception = true
@@ -131,9 +162,13 @@ module Cryptobroker::Broker
 
       def terminate
         synchronize do
-          cancel
+          abort
           @confirmator.terminate
         end
+      end
+
+      def ongoing_signal
+        synchronize { @db_ongoing_signal.get_value.freeze }
       end
 
       private
@@ -158,7 +193,16 @@ module Cryptobroker::Broker
             logger.warn { 'Broker of investor [%s] can not place [%s] order because of zero balance.' % [@investor.name, type] }
             return true
           end
-          @order = @api.send :"place_#{type}_order", @couple, price, amount
+          begin
+            @order = @api.public_send :"place_#{type}_order", @couple, price, amount
+          rescue Cryptobroker::API::InvalidAmountError
+            raise unless @balance_changes.empty?
+            logger.warn { 'Broker of investor [%s] can not place [%s] order because of balance less than minimal offer.' % [@investor.name, type] }
+            return true
+          rescue Cryptobroker::API::InsufficientFundsError
+            raise unless @balance_changes.empty?
+            raise InvalidBalanceError
+          end
           ActiveRecord::Base.with_connection { @db_order.set_value! @order }
           logger.debug { 'Broker of investor [%s] placed [%s] order with price [%f] for amount [%f].' %
               [@investor.name, @order.type, @order.price, @order.base_amount] }
@@ -195,10 +239,20 @@ module Cryptobroker::Broker
           cancelled
         end
       rescue Cryptobroker::API::RecoverableError => error
-        logger.error { 'Cancelling order of broker of investor [%s] failure. Will retry in %ds. Exception: %s (%s).' %
+        logger.warn { 'Cancelling order of broker of investor [%s] failure. Will retry in %ds. Exception: %s (%s).' %
             [@investor.name, FAST_RETRY_DELAY, error.message, error.class] }
         sleep FAST_RETRY_DELAY
         retry
+      end
+
+      def perform_cancel
+        trading = !@thread.nil?
+        if trading
+          @thread.terminate.join
+          @thread = nil
+        end
+        cancel_order
+        trading
       end
 
       def ticker
@@ -213,7 +267,7 @@ module Cryptobroker::Broker
         sleep duration if duration > 0
         !cancel_order
       rescue Cryptobroker::API::RecoverableError => error
-        logger.error { 'Signal price trading of broker of investor [%s] for [%s] order failure. Will retry in %ds. Exception: %s (%s).' %
+        logger.warn { 'Signal price trading of broker of investor [%s] for [%s] order failure. Will retry in %ds. Exception: %s (%s).' %
             [@investor.name, type, SLOW_RETRY_DELAY, error.message, error.class] }
         sleep SLOW_RETRY_DELAY
         retry
@@ -234,7 +288,7 @@ module Cryptobroker::Broker
         sleep @active_trading_refresh
         !cancel_order
       rescue Cryptobroker::API::RecoverableError => error
-        logger.error { 'Active price trading of broker of investor [%s] for [%s] order failure. Will retry in %ds. Exception: %s (%s).' %
+        logger.warn { 'Active price trading of broker of investor [%s] for [%s] order failure. Will retry in %ds. Exception: %s (%s).' %
             [@investor.name, type, SLOW_RETRY_DELAY, error.message, error.class] }
         sleep SLOW_RETRY_DELAY
         retry

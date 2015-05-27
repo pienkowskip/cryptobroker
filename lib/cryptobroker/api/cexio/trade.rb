@@ -7,6 +7,6 @@ class Cryptobroker::API::Cexio::Trade < Cryptobroker::API::Cexio::Entity
     set_attrs raw_trade, amount: 'amount', price: 'price', tid: 'tid', timestamp: 'date'
     convert_attrs timestamp: :time, tid: :Integer, amount: :big_decimal, price: :big_decimal
   rescue
-    raise Cryptobroker::API::Cexio::ResponseError
+    raise create_response_error
   end
 end

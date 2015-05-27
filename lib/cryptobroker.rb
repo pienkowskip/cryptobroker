@@ -15,8 +15,8 @@ class Cryptobroker
 
   attr_reader :tracer
 
-  def initialize(config_file = 'config.yml')
-    @config = Config.new(config_file)
+  def initialize(config_filename = 'config.yml')
+    @config = Config.new(config_filename)
     Database.init(@config.database)
     @apis = {}
     @charts = {}
@@ -54,7 +54,7 @@ class Cryptobroker
     markets = @investors.map(&:market_id).uniq
     downloader = downloader(markets)
     @investors.map! do |investor|
-      key = [investor.market_id, investor.beginning, investor.timeframe]
+      key = [investor.market_id, investor.beginning, investor.timeframe].freeze
       @charts[key] = Chart.new downloader, *key unless @charts.include? key
       investor.load_classes
       indicator = investor.get_indicator_class.new investor.get_indicator_conf
