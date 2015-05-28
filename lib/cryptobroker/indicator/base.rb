@@ -5,10 +5,12 @@ module Cryptobroker::Indicator
     include ::Indicator
     include ::Indicator::AutoGen
 
+    DEFAULT_PRICE = 'median'
+
     attr_reader :startup, :finished
 
-    def initialize(conf = {price: 'median'})
-      @price = conf.fetch :price, 'median'
+    def initialize(conf = {price: DEFAULT_PRICE})
+      @price = conf.fetch :price, DEFAULT_PRICE
       @price = @price.to_sym rescue @price
       reset
     end
@@ -29,11 +31,11 @@ module Cryptobroker::Indicator
     end
 
     def signal(type, bar, i)
-      yield type, bar.end, {idx: i, price: bar.send(@price)}
+      yield type, bar.end, {idx: i, price: bar.public_send(@price)}
     end
 
     def price(chart)
-      chart.map { |i| i.send @price }
+      chart.map { |i| i.public_send @price }
     end
 
     def shift_nils(array)

@@ -4,7 +4,7 @@ require 'bigdecimal'
 require 'bigdecimal/util'
 require_relative '../exceptions'
 
-module Cryptobroker::Evaluator
+class Cryptobroker::Evaluator
   class Config
     ENTRIES = [:indicators, :timeframes, :prices, :transaction_fee, :min_sample_size].freeze
 
@@ -24,6 +24,7 @@ module Cryptobroker::Evaluator
         rescue => err
           raise Cryptobroker::ConfigEntryError.new(key, err)
         end
+        value = value.freeze rescue value
         instance_variable_set(:"@#{key}", value)
       end
     end

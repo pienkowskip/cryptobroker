@@ -17,8 +17,8 @@ module Cryptobroker::Indicator
 
     def histogram(chart)
       price = price chart
-      fast = shift_nils @fast.run price
-      slow = shift_nils @slow.run price
+      fast = shift_nils @fast.run(price)
+      slow = shift_nils @slow.run(price)
       macd = fast.zip(slow).map { |f,s| f.nil? || s.nil? ? nil : f - s }
       idx = macd.index { |i| !i.nil? }
       signal = []

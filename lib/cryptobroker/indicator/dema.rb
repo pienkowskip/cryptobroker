@@ -16,8 +16,8 @@ module Cryptobroker::Indicator
 
     def histogram(chart)
       price = price chart
-      short = shift_nils @short_dema.run price
-      long = shift_nils @long_dema.run price
+      short = shift_nils @short_dema.run(price)
+      long = shift_nils @long_dema.run(price)
       short.zip(long).map { |s,l| s.nil? || l.nil? ? nil : s-l }
     end
   end

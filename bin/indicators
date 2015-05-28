@@ -1,12 +1,12 @@
 #!/usr/bin/env ruby
 
-require_relative '../lib/cryptobroker/evaluator/config'
+require_relative '../lib/cryptobroker/evaluator'
 
-config = Cryptobroker::Evaluator::Config.new('../tmp/indicator_test_case.yml')
+evaluator = Cryptobroker::Evaluator.new('../tmp/indicator_test_case.yml')
 puts '--- indicators ---'
-puts config.indicators.map(&:to_s)
+puts evaluator.indicators.map(&:to_s)
 (Cryptobroker::Evaluator::Config::ENTRIES - [:indicators]).each do |entry|
   puts "--- #{entry} ---"
-  puts config.public_send(entry).to_s
+  puts evaluator.public_send(entry).to_s
 end
 
