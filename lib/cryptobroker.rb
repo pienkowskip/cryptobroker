@@ -81,6 +81,21 @@ class Cryptobroker
     @tracer
   end
 
+  def trades(market_ids = nil, since = nil, till = nil)
+    ActiveRecord::Base.with_connection do
+      markets = Model::Market.preload(:base, :quote)
+      markets = market_ids.nil? ? markets.where(traced: true) : markets.where(id: [*market_ids])
+      timestamp_column = Cryptobroker::Model::Trade.arel_table[:timestamp]
+      markets.map do |market|
+        trades = market.trades
+        trades = trades.where(timestamp_column.gteq(since)) unless since.nil?
+        trades = trades.where(timestamp_column.lteq(till)) unless till.nil?
+        trades = trades.pluck(*Cryptobroker::Model::LightTrade::ATTRIBUTES)
+        [market, Cryptobroker::Model::LightTrade.map(trades)]
+      end
+    end
+  end
+
   def cycles
     markets = Model::Exchange.first.markets.preload(:base, :quote)
     detector = CyclesDetector::Detector.new markets, ->(name) { api name }
