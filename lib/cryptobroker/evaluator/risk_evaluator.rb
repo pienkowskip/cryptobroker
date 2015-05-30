@@ -1,14 +1,14 @@
 require_relative 'base_evaluator'
+require_relative '../broker/backtesting/relative'
 
 class Cryptobroker::Evaluator
   class RiskEvaluator < BaseEvaluator
-  end
+    def evaluate(market_trades_keys)
 
-  def evaluate(market_trades_keys)
+    end
 
-  end
+    def print_result(result)
 
-  def print_results(results)
-
+    end
   end
 end

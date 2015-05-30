@@ -1,4 +1,4 @@
-require_relative 'chart/simple'
+require_relative '../chart/simple'
 
 class Cryptobroker::Evaluator
   class ChartDispatcher
@@ -8,12 +8,13 @@ class Cryptobroker::Evaluator
     end
 
     def market_trades_keys
-      @charts.keys
+      @trades.keys
     end
 
     def set_market_trades(key, trades)
-      delete_market_trades(key)
       array = trades.to_a
+      raise ArgumentError, 'empty trades array' if array.empty?
+      delete_market_trades(key)
       array = array.dup if array.equal?(trades)
       @trades[key.freeze] = array.freeze
     end
@@ -30,7 +31,7 @@ class Cryptobroker::Evaluator
     def chart(key, timeframe) # What with different beginnings?
       @charts.fetch([key, timeframe].freeze) do |chart_key|
         trades = @trades.fetch(key)
-        chart = Cryptobroker::Chart::Simple.new(trades.first, timeframe)
+        chart = Cryptobroker::Chart::Simple.new(trades.first.timestamp, timeframe)
         trades.each { |trade| chart.append(trade.timestamp, trade.price, trade.amount) }
         @charts[chart_key] = chart.finish.to_a.freeze
       end

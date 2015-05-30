@@ -1,12 +1,14 @@
 #!/usr/bin/env ruby
 
-require_relative '../lib/cryptobroker/evaluator'
+require 'cryptobroker'
+require 'cryptobroker/evaluator'
+
+app = Cryptobroker.new('../dev-config.yml')
+
+markets = app.trades([1, 3, 6, 7])
 
 evaluator = Cryptobroker::Evaluator.new('../tmp/indicator_test_case.yml')
-puts '--- indicators ---'
-puts evaluator.indicators.map(&:to_s)
-(Cryptobroker::Evaluator::Config::ENTRIES - [:indicators]).each do |entry|
-  puts "--- #{entry} ---"
-  puts evaluator.public_send(entry).to_s
-end
 
+markets.each { |market, trades| evaluator.set_market_trades(market.id, trades) }
+
+evaluator.evaluate_final_score(evaluator.market_trades_keys, &evaluator.method(:print_final_score_result))

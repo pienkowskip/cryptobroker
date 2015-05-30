@@ -3,6 +3,7 @@ require_relative 'base'
 module Cryptobroker::Indicator
   class Random
     include Base
+
     def initialize(conf = {factor: 0.12})
       super conf
       @factor = conf[:factor]

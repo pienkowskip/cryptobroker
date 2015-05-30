@@ -45,7 +45,7 @@ class Cryptobroker::Evaluator
       elsif configs.is_a?(Array)
         require indicator_name.underscore
         indicator = indicator_name.constantize
-        keys = configs.first
+        keys = configs.first.map(&:to_sym)
         configs[1..-1].map! { |values| [indicator, Hash[keys.zip(values)]] }
       elsif configs.nil?
         []

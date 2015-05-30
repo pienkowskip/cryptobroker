@@ -1,83 +1,37 @@
 #!/usr/bin/env ruby
 
 require 'cryptobroker'
-require 'pry'
+require 'cryptobroker/evaluator'
 
 app = Cryptobroker.new('../dev-config.yml')
 
-market, trades = app.trades([1])[0]
+markets = app.trades
 
-timeframe = 15*60
-chart = Cryptobroker::Chart::Simple.new(trades.first.timestamp, timeframe)
-trades.each { |t| chart.append(t.timestamp, t.price, t.amount) }
-chart.finish
+evaluator = Cryptobroker::Evaluator.new('../tmp/indicator_test_case.yml')
 
-res = (trades.last.timestamp - trades.first.timestamp) / timeframe.to_f
+markets.map! do |market, trades|
+  evaluator.set_market_trades(market.id, trades)
+  [market.id, market]
+end
+markets = Hash[markets]
 
-puts "market: #{market.couple}"
-puts "period: #{trades.first.timestamp} - #{trades.last.timestamp}"
-puts "coverage: #{chart.size * 100 / res} %"
+evaluator.market_chart_coverage(evaluator.market_trades_keys) do |key, coverages|
+  market = markets[key]
 
-require 'cryptobroker/indicator/filtered_macd'
-require 'cryptobroker/indicator/macd'
-require 'cryptobroker/indicator/dema'
-require 'cryptobroker/broker/backtesting/transaction_fee'
-require 'cryptobroker/broker/backtesting/relative'
+  puts nil, "# Market: #{market.couple} (id: #{market.id})", nil
+  last, first = market.trades.last, market.trades.first
+  count = market.trades.count
+  diff = ->(method) { last.public_send(method) - first.public_send(method) }
+  puts "- begins: #{first.timestamp}"
+  puts "- ends: #{last.timestamp}"
+  puts '- lasts: %.1f days' % (diff.call(:timestamp).to_f / 24 / 3600)
 
-start_amount = 100.to_d
-bars = chart.to_a
+  puts nil, '## Fetching performance'
+  puts "- actual trades: #{count}"
+  puts "- expected trades: #{diff.call(:tid) + 1}"
+  puts '- ratio: %.1f%%' % (count.to_f * 100 / (diff.call(:tid) + 1))
 
-tests = [
-    [:base, '0.002', Cryptobroker::Indicator::FilteredMACD.new],
-    [:quote, '0.002', Cryptobroker::Indicator::FilteredMACD.new],
-    [:base, '0.01', Cryptobroker::Indicator::FilteredMACD.new],
-    [:base, '0.002', Cryptobroker::Indicator::MACD.new],
-    [:quote, '0.002', Cryptobroker::Indicator::DEMA.new],
-]
-tests.each do |btype, fee, indicator|
-  pos_diff = fee.to_d
-  pos_diff = pos_diff - (pos_diff/(1+pos_diff))
-
-  # indicator = (bars.size / 20 - 1).times.map {|i| (i+1)*20}
-  # indicator.unshift(0)
-  # indicator.push(bars.size - 3)
-  # indicator.push(bars.size - 2)
-  # indicator.push(bars.size - 1)
-  #
-  # indicator = bars.size.times.to_a
-  #
-  # indicator = indicator.zip([:buy, :sell].cycle)
-
-  transaction_fee = Cryptobroker::Broker::Backtesting::TransactionFee.new(btype, :median, start_amount, fee)
-  relative = Cryptobroker::Broker::Backtesting::Relative.new(btype, :median, fee)
-  transaction_fee.reset(bars)
-  relative.reset(bars)
-  signals = 0
-
-  indicator.append(bars) do |type, ts, params|
-    next unless params[:idx] + 1 < bars.size
-    transaction_fee.public_send(type, params[:idx]+1)
-    relative.public_send(type, params[:idx]+1)
-    signals += 1
-  end
-  puts "\nindicator: #{indicator.name}  signals: #{signals}"
-
-  # indicator.each do |idx, type|
-  #   transaction_fee.public_send(type, idx)
-  #   relative.public_send(type, idx)
-  #   signals += 1
-  # end
-  # puts "\nsignals: #{signals}"
-
-  puts 'trs_fee: %.100f' % transaction_fee.result[0]
-
-  amount = start_amount
-  relative.result.each do |change|
-    next if change == 0
-    amount *= 1 + change
-  end
-  puts 'relativ: %.100f' % amount
-
-  puts 'differe: %e' % (transaction_fee.result[0]-amount).abs
-  puts 'posdiff: %e' % (amount * pos_diff)
+  puts nil, '## Chart coverage per timestamp'
+  coverages.each { |tf, coverage| puts '- %4.1f min: %4.1f%%' % [tf / 60.0, coverage * 100] }
+  puts nil
 end
