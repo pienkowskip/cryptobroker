@@ -9,8 +9,8 @@ module Cryptobroker::CyclesDetector
 
     def initialize(markets, api_dispatcher)
       currencies = {}
-      add_curr = ->(curr) { currencies[curr.id] = curr unless currencies.include? curr.id}
-      markets.each { |market| add_curr[market.base] ; add_curr[market.quote] }
+      add_curr = ->(curr) { currencies[curr.id] = curr unless currencies.include? curr.id }
+      markets.each { |market| add_curr[market.base]; add_curr[market.quote] }
       graph = Graph.new
       currencies.values.each { |curr| graph.add_vertex curr }
       markets_hash = {}
@@ -24,7 +24,7 @@ module Cryptobroker::CyclesDetector
       @cycles = graph.detect_cycles
       map_cycle = ->(cycle) do
         new_cycle = []
-        cycle.each_cons(2) do |b,e|
+        cycle.each_cons(2) do |b, e|
           new_cycle << BalanceLog.new(currencies[b.id])
           market, dir = markets_hash[[b.id, e.id]]
           @markets[market.id] = MarketOrders.new market, api_dispatcher[market.exchange] unless @markets.include? market.id
@@ -41,7 +41,7 @@ module Cryptobroker::CyclesDetector
       @cycles = new_cycles
     end
 
-    def start
+    def run
       timer = Timer.new.start
       @markets.values.map do |market|
         Thread.new { market.update }
@@ -54,8 +54,7 @@ module Cryptobroker::CyclesDetector
           'USD' => 10,
           'EUR' => 10,
           'BTC' => 0.05,
-          'LTC' => 10,
-      }
+          'LTC' => 10}
 
       @cycles.each do |cycle|
         cycle = cycle.cycle(2).to_a
@@ -82,16 +81,15 @@ module Cryptobroker::CyclesDetector
 
       @cycles.map do |cycle|
         result = []
-        cycle.each_slice(2) do |log,_|
-          spent,e = log.log
+        cycle.each_slice(2) do |log, _|
+          spent, e = log.log
           p = nil
           p = (e / spent - 1.0) * 100 unless spent.nil? || e.nil?
           result << {
               currency: log.currency.code,
               start: spent,
-              end: e,
-              change: p
-          }
+              end: e ,
+              change: p}
         end
         result
       end

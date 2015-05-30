@@ -96,10 +96,9 @@ class Cryptobroker
     end
   end
 
-  def cycles
+  def cycles_detector
     markets = Model::Exchange.first.markets.preload(:base, :quote)
-    detector = CyclesDetector::Detector.new markets, ->(name) { api name }
-    detector.start
+    CyclesDetector::Detector.new(markets, ->(name) { api name })
   end
 
   def terminate
