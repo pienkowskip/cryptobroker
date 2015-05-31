@@ -22,9 +22,9 @@ class Cryptobroker::Evaluator
     market_trades_keys.each do |key|
       coverages = @config.timeframes.map do |timeframe|
         trades = get_market_trades(key)
-        coverage = @chart_dispatcher.chart(key, timeframe).size.to_f
-        coverage /= (trades.last.timestamp - trades.first.timestamp) / timeframe.to_f
-        [timeframe, coverage]
+        actual = @chart_dispatcher.chart(key, timeframe).size
+        expected = (trades.last.timestamp - trades.first.timestamp) / timeframe.to_f
+        [timeframe, actual, expected]
       end
       yield key, coverages
     end
