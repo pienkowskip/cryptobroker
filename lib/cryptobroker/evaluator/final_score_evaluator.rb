@@ -1,3 +1,4 @@
+require 'set'
 require_relative 'base_evaluator'
 require_relative '../broker/backtesting/transaction_fee'
 
@@ -37,6 +38,7 @@ class Cryptobroker::Evaluator
       market_trades_keys = [*market_trades_keys]
       return enum_for(:evaluate, market_trades_keys) unless block_given?
 
+      overall_scores = []
       timer = Timer.new
       @config.timeframes.each do |timeframe|
         timer.start
@@ -93,75 +95,92 @@ class Cryptobroker::Evaluator
                 self.class.weighted_standard_deviation(score.amount, amounts),
                 self.class.weighted_standard_deviation(score.transactions, transactions))
           end
-          scores << [{name: indicator.name, class: ind_class, config: ind_config}, indicator_score]
+          indicator_score = [{name: indicator.name, class: ind_class, config: ind_config, timeframe: timeframe}, indicator_score]
+          scores << indicator_score
+          overall_scores << indicator_score
         end
         timer.finish
         logger.debug { timer.enhance 'Measured performance of %d indicators on %d samples (%d bars).' % [indicators.size, samples_stat[:count], samples_stat[:bars]] }
         yield scores, timeframe, samples_stat
       end
-      nil
+      overall_scores
     end
 
-    def print_result(scores, timeframe, samples, top_indicators = 10, io = $stdout)
-      top_indicators = Integer(top_indicators) unless top_indicators.nil?
+    def print_timestamp_scores(scores, timeframe, samples, top_scores = 10, io = $stdout)
       io.puts nil, '# timeframe: %.1f min, samples: %d (%d bars)' % [timeframe / 60.0, samples[:count], samples[:bars]]
+      day_factor = 24 * 60 * 60 / timeframe.to_d
+      headers = ['pos', 'indicator', 'price', 'change per day', 'trs per day', 'change per bar', 'trs per bar']
+      justify_methods = [:rjust, :center, :center, :rjust, :rjust, :rjust, :rjust]
+      format_strs = ['#%02d', '%s', '%s', '%+.4f%% (sd: %.5f%%)', '%.2f (sd: %.3f)', '%+.5f%% (sd: %.6f%%)', '%.3f (sd: %.4f)']
+      print_scores(scores, headers, justify_methods, top_scores, io) do |indicator, score, order_by, pos|
+        sc = score.fetch(order_by)
+        sd = score.fetch(:"#{order_by}_sd")
+        results = [sc.amount * 100, sd.amount * 100, sc.transactions, sd.transactions]
+        results = results.map { |result| result * day_factor }.concat(results)
+        results = results.each_slice(2).to_a
+        results = [pos, indicator.fetch(:name), indicator.fetch(:config).fetch(:price)].concat(results)
+        format_strs.zip(results).map { |format, data| format % data }
+      end
+    end
+
+    def print_overall_scores(scores, top_scores = 20, io = $stdout)
+      io.puts nil, '# overall indicators scores'
+      headers = ['pos', 'tf', 'indicator', 'price', 'change per day', 'trs per day']
+      justify_methods = [:rjust, :rjust, :center, :center, :rjust, :rjust]
+      format_strs = ['#%02d', '%.1f', '%s', '%s', '%+.5f%% (sd: %.6f%%)', '%.3f (sd: %.4f)']
+      print_scores(scores, headers, justify_methods, top_scores, io) do |indicator, score, order_by, pos|
+        sc = score.fetch(order_by)
+        sd = score.fetch(:"#{order_by}_sd")
+        timeframe = indicator.fetch(:timeframe)
+        day_factor = 24 * 60 * 60 / timeframe.to_d
+        results = [sc.amount * 100, sd.amount * 100, sc.transactions, sd.transactions]
+        results = results.map { |result| result * day_factor }.each_slice(2).to_a
+        results = [pos, timeframe / 60.0, indicator.fetch(:name), indicator.fetch(:config).fetch(:price)].concat(results)
+        format_strs.zip(results).map { |format, data| format % data }
+      end
+    end
+
+    private
+
+    def print_scores(scores, columns_headers, justify_methods, top_scores, io = $stdout)
+      top_scores = Integer(top_scores) unless top_scores.nil?
       if scores.empty?
         io.puts nil, '## no scores', nil
         io.flush
         return
       end
-      scores = scores.map do |indicator, score|
-        label = "#{indicator.fetch(:name)} on #{indicator.fetch(:config).fetch(:price)}"
-        [label, score]
-      end
-      day_factor = 24 * 60 * 60 / timeframe.to_d
-      columns_headers = [
-          'indicator',
-          'change per day',
-          'trs per day',
-          'change per bar',
-          'trs per bar']
-      columns_format_str = [
-          '%s',
-          '%+.4f%% (sd: %.5f%%)',
-          '%.2f (sd: %.3f)',
-          '%+.5f%% (sd: %.6f%%)',
-          '%.3f (sd: %.4f)']
-      [:median, :mean].each do |sym|
-        io.puts nil, '## %s by %s' % [top_indicators.nil? ? 'all' : "top #{top_indicators}", sym], nil
-        list = scores.sort_by { |_, score| score.fetch(sym).amount }
+      [:median, :mean].each do |order_by|
+        io.puts nil, '## %s by %s' % [top_scores.nil? ? 'all' : "top #{top_scores}", order_by], nil
+        list = scores.sort_by { |indicator, score| score.fetch(order_by).amount / indicator.fetch(:timeframe).to_d }
         list.reverse!
-        list = list.first(top_indicators) unless top_indicators.nil?
-        rows = list.map do |label, score|
-          sc = score.fetch(sym)
-          sd = score.fetch(:"#{sym}_sd")
-          results = [sc.amount * 100, sd.amount * 100, sc.transactions, sd.transactions]
-          results = results.map { |result| result * day_factor }.concat(results)
-          results = results.each_slice(2).to_a
-          results.unshift(label)
-          columns_format_str.zip(results).map { |format, data| format % data }
-        end
-        rows.push(columns_headers)
-        columns_widths = rows.transpose.map { |col| col.map(&:size).max }
-        rows.pop
-        rows.map! do |row|
-          row.each_with_index.map do |str, ci|
-            if ci == 0
-              str.center(columns_widths[ci] + 2)
-            else
-              ' ' << str.rjust(columns_widths[ci]) << ' '
-            end
-          end
-        end
-        rows.unshift(columns_widths.map { |cw| '-' * (cw + 2) })
-        rows.unshift(columns_headers.zip(columns_widths).map { |ch, cw| ch.center(cw + 2) })
-        rows.each { |row| io.puts '|' << row.join('|') << '|' }
+        list = list.first(top_scores) unless top_scores.nil?
+        list = list.map.with_index(1) { |score, pos| yield *score, order_by, pos }
+        print_table(list, columns_headers, justify_methods, io)
       end
       io.puts nil
       io.flush
     end
 
-    private
+    def print_table(rows, headers = nil, justify_methods = nil, io = $stdout)
+      rows.push(headers) unless headers.nil?
+      widths = rows.transpose.map { |col| col.map(&:size).max }
+      justify_methods = Array.new(widths.size, :ljust) if justify_methods.nil?
+      proper_justify_methods = Set[:rjust, :ljust, :center]
+      raise ArgumentError, 'invalid justify methods' unless justify_methods.size == widths.size &&
+          justify_methods.all? { |jm| proper_justify_methods.include?(jm) }
+      rows.pop unless headers.nil?
+      rows = rows.map do |row|
+        row.each_with_index.map { |str, ci| ' ' << str.public_send(justify_methods.fetch(ci), widths.fetch(ci)) << ' ' }
+      end
+      unless headers.nil?
+        bar = justify_methods.zip(widths).map do |jm, width|
+          (jm == :center || jm == :ljust ? ':' : '-') << '-' * (width) << (jm == :center || jm == :rjust ? ':' : '-')
+        end
+        rows.unshift(bar)
+        rows.unshift(headers.zip(widths).map { |header, width| header.center(width + 2) })
+      end
+      rows.each { |row| io.puts '|' << row.join('|') << '|' }
+    end
 
     def prepare_chart_samples(bars)
       return enum_for(:prepare_chart_samples, bars) unless block_given?
