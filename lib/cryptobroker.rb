@@ -6,10 +6,10 @@ require_relative 'cryptobroker/downloader'
 require_relative 'cryptobroker/chart'
 require_relative 'cryptobroker/investor'
 require_relative 'cryptobroker/cycles_detector/detector'
-require_relative 'cryptobroker/logging'
+require_relative 'cryptobroker/utility/logging'
 
 class Cryptobroker
-  include Logging
+  include Utility::Logging
 
   TRACE_REFRESH_INTERVAL = 10 * 60
 

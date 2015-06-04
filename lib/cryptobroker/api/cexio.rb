@@ -2,7 +2,7 @@ require 'openssl'
 require 'uri'
 require 'json'
 require 'net/http/persistent'
-require_relative '../logging'
+require_relative '../utility/logging'
 require_relative 'errors'
 require_relative 'cexio/converter'
 require_relative 'cexio/trade'
@@ -13,7 +13,7 @@ require_relative 'cexio/archived_order'
 
 module Cryptobroker::API
   class Cexio
-    include Cryptobroker::Logging
+    include Cryptobroker::Utility::Logging
     include Converter
 
     API_URL = 'https://cex.io/api'.freeze

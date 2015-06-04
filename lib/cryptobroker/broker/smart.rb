@@ -1,10 +1,10 @@
 require 'thread'
-require_relative '../logging'
+require_relative '../utility/logging'
 require_relative 'smart/trader'
 
 module Cryptobroker::Broker
   class Smart
-    include Cryptobroker::Logging
+    include Cryptobroker::Utility::Logging
 
     CONCURRENCY_DELAY = 0.3
 

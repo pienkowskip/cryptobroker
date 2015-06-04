@@ -1,11 +1,11 @@
 require_relative 'graph'
 require_relative 'balance_log'
 require_relative 'market_orders'
-require_relative '../logging'
+require_relative '../utility/logging'
 
 module Cryptobroker::CyclesDetector
   class Detector
-    include Cryptobroker::Logging
+    include Cryptobroker::Utility::Logging
 
     def initialize(markets, api_dispatcher)
       currencies = {}

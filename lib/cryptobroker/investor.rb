@@ -1,8 +1,8 @@
 require 'thread'
-require_relative 'logging'
+require_relative 'utility/logging'
 
 class Cryptobroker::Investor
-  include Cryptobroker::Logging
+  include Cryptobroker::Utility::Logging
 
   def initialize(chart, indicator, broker, name)
     @chart, @indicator, @broker, @name = chart, indicator, broker, name

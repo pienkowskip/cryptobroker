@@ -1,11 +1,11 @@
 require 'thread'
 require 'monitor'
-require_relative 'logging'
+require_relative 'utility/logging'
 require_relative 'api/errors'
 
 class Cryptobroker::Downloader
   class Market
-    include Cryptobroker::Logging
+    include Cryptobroker::Utility::Logging
 
     ATTEMPTS = 3
     RETRY_DELAY = 3
@@ -85,7 +85,7 @@ class Cryptobroker::Downloader
   end
 
   include MonitorMixin
-  include Cryptobroker::Logging
+  include Cryptobroker::Utility::Logging
 
   def initialize(api_dispatcher, threads, preload_market_ids = [])
     super()

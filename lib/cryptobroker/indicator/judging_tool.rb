@@ -6,13 +6,13 @@ require_relative 'filtered_macd_with_dema'
 require_relative 'dema'
 require_relative 'filtered_dema'
 require_relative 'random'
-require_relative '../statistics'
-require_relative '../logging'
+require_relative '../utility/statistics'
+require_relative '../utility/logging'
 
 module Cryptobroker::Indicator
   class JudgingTool
-    extend Cryptobroker::Statistics
-    include Cryptobroker::Logging
+    extend Cryptobroker::Utility::Statistics
+    include Cryptobroker::Utility::Logging
 
     HOUR_TF = 60 * 60
 

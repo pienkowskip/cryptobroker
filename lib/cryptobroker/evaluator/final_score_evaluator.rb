@@ -1,6 +1,7 @@
 require 'set'
 require_relative 'base_evaluator'
 require_relative '../broker/backtesting/transaction_fee'
+require_relative '../utility/markdown'
 
 class Cryptobroker::Evaluator
   class FinalScoreEvaluator < BaseEvaluator
@@ -155,31 +156,10 @@ class Cryptobroker::Evaluator
         list.reverse!
         list = list.first(top_scores) unless top_scores.nil?
         list = list.map.with_index(1) { |score, pos| yield *score, order_by, pos }
-        print_table(list, columns_headers, justify_methods, io)
+        Cryptobroker::Utility::Markdown.table(list, columns_headers, justify_methods, io)
       end
       io.puts nil
       io.flush
-    end
-
-    def print_table(rows, headers = nil, justify_methods = nil, io = $stdout)
-      rows.push(headers) unless headers.nil?
-      widths = rows.transpose.map { |col| col.map(&:size).max }
-      justify_methods = Array.new(widths.size, :ljust) if justify_methods.nil?
-      proper_justify_methods = Set[:rjust, :ljust, :center]
-      raise ArgumentError, 'invalid justify methods' unless justify_methods.size == widths.size &&
-          justify_methods.all? { |jm| proper_justify_methods.include?(jm) }
-      rows.pop unless headers.nil?
-      rows = rows.map do |row|
-        row.each_with_index.map { |str, ci| ' ' << str.public_send(justify_methods.fetch(ci), widths.fetch(ci)) << ' ' }
-      end
-      unless headers.nil?
-        bar = justify_methods.zip(widths).map do |jm, width|
-          (jm == :center || jm == :ljust ? ':' : '-') << '-' * (width) << (jm == :center || jm == :rjust ? ':' : '-')
-        end
-        rows.unshift(bar)
-        rows.unshift(headers.zip(widths).map { |header, width| header.center(width + 2) })
-      end
-      rows.each { |row| io.puts '|' << row.join('|') << '|' }
     end
 
     def prepare_chart_samples(bars)

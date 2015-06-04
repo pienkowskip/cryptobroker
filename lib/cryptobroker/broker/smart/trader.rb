@@ -1,5 +1,5 @@
 require 'monitor'
-require_relative '../../logging'
+require_relative '../../utility/logging'
 require_relative '../../api/errors'
 require_relative 'confirmator'
 
@@ -23,7 +23,7 @@ module Cryptobroker::Broker
       class InvalidBalanceError < StandardError
       end
 
-      include Cryptobroker::Logging
+      include Cryptobroker::Utility::Logging
       include MonitorMixin
 
       FAST_RETRY_DELAY = 3

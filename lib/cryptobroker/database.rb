@@ -1,4 +1,4 @@
-require_relative 'logging'
+require_relative 'utility/logging'
 
 class Cryptobroker::Database
   def self.init(config)
@@ -53,6 +53,6 @@ class Cryptobroker::Database
     Dir.glob(File.join File.dirname(__FILE__), 'model', '*.rb').each { |model| require_relative model }
 
     ActiveRecord::Base.establish_connection(config)
-    ActiveRecord::Base.logger = Cryptobroker::Logging.logger_for ActiveRecord::Base.name
+    ActiveRecord::Base.logger = Cryptobroker::Utility::Logging.logger_for ActiveRecord::Base.name
   end
 end

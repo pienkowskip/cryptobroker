@@ -1,5 +1,5 @@
 require 'yaml'
-require_relative 'logging'
+require_relative 'utility/logging'
 require_relative 'exceptions'
 
 class Cryptobroker::Config
@@ -30,7 +30,7 @@ class Cryptobroker::Config
     file = logger.fetch :file
     file = logdev_map[file.downcase] if logdev_map.include? file.downcase
     level = Logger::Severity.const_get(logger.fetch(:level).upcase.to_sym, false)
-    Cryptobroker::Logging.setup file, level
+    Cryptobroker::Utility::Logging.setup file, level
     true
   rescue => err
     raise Cryptobroker::ConfigEntryError.new('application.logger', err)

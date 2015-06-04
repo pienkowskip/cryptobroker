@@ -4,7 +4,7 @@ require_relative '../broker/relative'
 module Cryptobroker::Indicator
   class RiskJudging < JudgingTool
     class Vector
-      extend Cryptobroker::Statistics
+      extend Cryptobroker::Utility::Statistics
 
       attr_reader :data
 

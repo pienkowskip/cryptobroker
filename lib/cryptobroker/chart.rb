@@ -1,12 +1,12 @@
 require 'thread'
 require 'monitor'
 require_relative '../illegal_state_error'
-require_relative 'logging'
+require_relative 'utility/logging'
 require_relative 'chart/buffered'
 
 class Cryptobroker::Chart
   include MonitorMixin
-  include Cryptobroker::Logging
+  include Cryptobroker::Utility::Logging
 
   attr_reader :beginning, :timeframe
 
