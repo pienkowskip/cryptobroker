@@ -1,3 +1,5 @@
+require 'oj'
+
 module Cryptobroker::Model
   class Investor < ActiveRecord::Base
     belongs_to :market
@@ -23,7 +25,7 @@ module Cryptobroker::Model
       define_method :"get_#{attr}_conf" do
         conf = send(:"#{attr}_conf")
         return nil if conf.nil?
-        JSON.parse(conf).deep_symbolize_keys
+        Oj.load(conf, bigdecimal_load: :bigdecimal).deep_symbolize_keys
       end
     end
 

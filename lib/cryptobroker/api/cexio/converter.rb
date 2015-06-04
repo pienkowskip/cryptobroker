@@ -25,17 +25,19 @@ module Cryptobroker::API
       protected
 
       def big_decimal(str)
+        return str if str.is_a?(BigDecimal)
         Float str
         str.to_d
       end
 
       def time(ts)
+        return ts if ts.is_a?(Time)
         Time.at Float(ts)
       end
 
       def order_type(type)
         type = type.to_sym
-        raise ArgumentError, 'invalid order type' unless [:buy, :sell].include? type
+        raise ArgumentError, 'invalid order type' unless [:buy, :sell].include?(type)
         type
       end
 
@@ -45,7 +47,7 @@ module Cryptobroker::API
       end
 
       def split_couple(couple)
-        couple = couple.split '/'
+        couple = couple.split('/')
         raise ArgumentError, 'invalid couple format ' unless couple.size == 2
         couple
       end

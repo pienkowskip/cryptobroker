@@ -1,6 +1,6 @@
 require 'openssl'
 require 'uri'
-require 'json'
+require 'oj'
 require 'net/http/persistent'
 require_relative '../utility/logging'
 require_relative 'errors'
@@ -158,7 +158,7 @@ module Cryptobroker::API
 
     def parse_json_answer(answer)
       begin
-        answer = JSON.parse(answer)
+        answer = Oj.load(answer, bigdecimal_load: :bigdecimal)
       rescue
         raise Cryptobroker::API::ResponseError, 'parsing response JSON failure'
       end
