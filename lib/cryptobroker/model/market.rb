@@ -5,6 +5,8 @@ module Cryptobroker::Model
     belongs_to :quote, class_name: 'Currency'
     has_many :trades, inverse_of: :market, dependent: :destroy
 
+    scope :traced, -> { where(traced: true) }
+
     validates_belongs :exchange, :base, :quote
     validates :traced, inclusion: [true, false]
 

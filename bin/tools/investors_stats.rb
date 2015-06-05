@@ -4,7 +4,7 @@ require 'cryptobroker'
 require 'cryptobroker/utility/markdown'
 require 'cryptobroker/chart/simple'
 
-app = Cryptobroker.new('../ovh-config.yml')
+app = Cryptobroker.new('../../ovh-config.yml')
 
 chart_max_length = 5000
 timestamp_column = Cryptobroker::Model::Trade.arel_table[:timestamp]

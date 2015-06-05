@@ -13,7 +13,7 @@ class Cryptobroker::Config
     end
     [:database, :auth, :application].each do |key|
       raise Cryptobroker::ConfigError, "configuration file not sufficient: missing '#{key}' entry" unless config.include? key
-      instance_variable_set :"@#{key}", config[key]
+      instance_variable_set :"@#{key}", config[key].freeze
     end
     setup_logger
   end

@@ -13,10 +13,10 @@ class Cryptobroker
 
   TRACE_REFRESH_INTERVAL = 10 * 60
 
-  attr_reader :tracer
+  attr_reader :tracer, :config
 
   def initialize(config_filename = 'config.yml')
-    @config = Config.new(config_filename)
+    @config = Config.new(config_filename).freeze
     Database.init(@config.database)
     @apis = {}
     @charts = {}
@@ -67,7 +67,7 @@ class Cryptobroker
 
   def trace(refresh_interval = TRACE_REFRESH_INTERVAL)
     raise IllegalStateError, 'already started tracing' unless @tracer.nil?
-    markets = ActiveRecord::Base.with_connection { Model::Market.where(traced: true).pluck(:id) }
+    markets = ActiveRecord::Base.with_connection { Model::Market.traced.pluck(:id) }
     return nil if markets.empty?
     downloader = downloader(markets)
     @tracer = Thread.new do
@@ -84,7 +84,7 @@ class Cryptobroker
   def trades(market_ids = nil, since = nil, till = nil)
     ActiveRecord::Base.with_connection do
       markets = Model::Market.preload(:base, :quote)
-      markets = market_ids.nil? ? markets.where(traced: true) : markets.where(id: [*market_ids])
+      markets = market_ids.nil? ? markets.traced : markets.where(id: [*market_ids])
       timestamp_column = Cryptobroker::Model::Trade.arel_table[:timestamp]
       markets.map do |market|
         trades = market.trades

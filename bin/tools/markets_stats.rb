@@ -3,11 +3,11 @@
 require 'cryptobroker'
 require 'cryptobroker/evaluator'
 
-app = Cryptobroker.new('../dev-config.yml')
+app = Cryptobroker.new('../../dev-config.yml')
 
 markets = app.trades
 
-evaluator = Cryptobroker::Evaluator.new('../tmp/indicator_test_case.yml')
+evaluator = Cryptobroker::Evaluator.new('../../tmp/indicator_test_case.yml')
 
 markets.map! do |market, trades|
   evaluator.set_market_trades(market.id, trades)
