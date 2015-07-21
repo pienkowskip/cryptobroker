@@ -110,7 +110,7 @@ module Cryptobroker::API
       OpenOrder.new api_call('place_order', {type: type.to_s, price: price.to_s, amount: amount.to_s}, true, couple), couple
     rescue Cryptobroker::API::LogicError => err
       raise Cryptobroker::API::InsufficientFundsError, err.message if err.message == 'Error: Place order error: Insufficient funds.'
-      raise Cryptobroker::API::InvalidAmountError, err.message if err.message == 'Invalid amount'
+      raise Cryptobroker::API::InvalidAmountError, err.message if err.message == 'There was an error while placing your order: Invalid amount'
       raise
     end
 
