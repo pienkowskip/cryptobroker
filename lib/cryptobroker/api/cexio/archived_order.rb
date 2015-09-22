@@ -9,9 +9,6 @@ class Cryptobroker::API::Cexio::ArchivedOrder < Cryptobroker::API::Cexio::Entity
     qc = raw_order.fetch('symbol2')
     @quote_amount = raw_order.fetch "ta:#{qc}", 0
     @quote_fee = raw_order.fetch "fa:#{qc}", 0
-    md = /\A([0-9]+)\.([0-9]+)\z/.match base_amount
-    raise ArgumentError, 'invalid amount' unless md
-    @base_remained = @base_remained.to_s.rjust(md[1].length + md[2].length, '0').insert(md[1].length, '.')
     convert_attrs id: :Integer, type: :order_type, timestamp: ->(ts) { Time.parse(ts) },
                   status: ->(status) do
                     if status == 'd'
